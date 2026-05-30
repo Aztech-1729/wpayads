@@ -456,7 +456,7 @@ def render_autojoin_prompt() -> str:
     )
 
 
-def render_autojoin_progress(joined: int, failed: int, total: int, status: str = "Processing") -> str:
+def render_autojoin_progress(joined: int, failed: int, total: int, status: str = "Processing", groups_count: int = 0, accounts_count: int = 0) -> str:
     """Render the real-time joining progress."""
     progress = (joined + failed)
     pct = (progress / total * 100) if total > 0 else 0
@@ -466,9 +466,11 @@ def render_autojoin_progress(joined: int, failed: int, total: int, status: str =
         f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"⏳ <b>Status: {status}</b>\n\n"
         f"📊 <b>STATS:</b>\n"
+        f"├ <b>Groups: {groups_count}</b>\n"
+        f"├ <b>Accounts: {accounts_count}</b>\n"
         f"├ <b>Joined: {joined}</b>\n"
         f"├ <b>Failed: {failed}</b>\n"
-        f"└ <b>Total: {total}</b>\n\n"
+        f"└ <b>Target Joins: {total}</b>\n\n"
         f"📈 <b>Progress: {progress}/{total} ({pct:.1f}%)</b>\n"
         f"{_bar(progress, total, 16)}\n\n"
         f"<i>Campaigns are locked until this process finishes.</i>"

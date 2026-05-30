@@ -163,8 +163,49 @@ def _register_handlers(bot: TelegramClient) -> None:
 
         # Handle File Upload for Auto Join
         if awaiting == "autojoin_file" and event.document:
-            # ... (existing autojoin logic)
-            pass
+            filename = event.document.attributes[0].file_name if event.document.attributes else ""
+            if not filename.lower().endswith(".txt"):
+                await event.respond("❌ Please send a <b>.txt</b> file containing group links.", parse_mode="html")
+                return
+
+            file_bytes = await event.download_media(bytes)
+            try:
+                content = file_bytes.decode("utf-8")
+                links = [line.strip() for line in content.split("\n") if line.strip()]
+            except UnicodeDecodeError:
+                await event.respond("❌ Invalid file encoding. Please upload a plain text (.txt) file in UTF-8 format.")
+                return
+
+            if not links:
+                await event.respond("❌ No links found in the file.")
+                return
+
+            from telegram import menus, keyboards
+            from services.joiner_service import start_auto_join
+            from repositories import accounts_repo
+            
+            account_count = await accounts_repo.count_by_owner(user_id)
+            total_joins = account_count * len(links)
+
+            progress_msg = await event.respond(
+                menus.render_autojoin_progress(0, 0, total_joins, "Starting...", len(links), account_count),
+                buttons=keyboards.autojoin_progress_keyboard(),
+                parse_mode="html"
+            )
+
+            async def update_callback(joined: int, failed: int, total: int, status: str = "Processing") -> None:
+                try:
+                    await progress_msg.edit(
+                        menus.render_autojoin_progress(joined, failed, total, status, len(links), account_count),
+                        buttons=keyboards.autojoin_progress_keyboard() if "Complete" not in status and "Cancel" not in status and "Error" not in status else None,
+                        parse_mode="html"
+                    )
+                except Exception:
+                    pass  # Ignore MessageNotModifiedError or similar
+
+            await set_context(user_id, "awaiting_input", None)
+            await start_auto_join(user_id, links, update_callback)
+            return
 
         # Handle Session Upload
         if awaiting == "session_upload" and event.document:

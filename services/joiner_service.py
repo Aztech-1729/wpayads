@@ -51,91 +51,96 @@ async def start_auto_join(user_id: int, links: List[str], update_callback) -> No
     _joiner_locks[user_id] = True
 
 async def _run_joiner_task(user_id: int, links: List[str], update_callback) -> None:
-    """The background task that executes the joining logic."""
+    """The background task that executes the joining logic for all accounts in parallel."""
     try:
         accounts = await accounts_repo.list_by_owner(user_id)
         if not accounts:
             await update_callback(0, 0, len(links), "❌ No accounts found.")
             return
 
-        total_links = len(links)
-        joined = 0
-        failed = 0
+        total_joins = len(accounts) * len(links)
         
-        # 50 joins per hour limit logic
-        # Roughly 1 join every 72 seconds per account
-        # We'll use a more dynamic approach
+        state = {
+            "joined": 0,
+            "failed": 0,
+            "lock": asyncio.Lock()
+        }
         
-        for i, link in enumerate(links):
-            # Pick a random account for this link to distribute load
-            account = random.choice(accounts)
+        async def _safe_update(joined_inc: int = 0, failed_inc: int = 0, status: str = "Processing") -> None:
+            async with state["lock"]:
+                state["joined"] += joined_inc
+                state["failed"] += failed_inc
+                await update_callback(state["joined"], state["failed"], total_joins, status)
+                
+        async def _account_worker(account) -> None:
             account_id = str(account.id)
-            
-            clean_link = _sanitize_link(link)
-            if not clean_link:
-                failed += 1
-                continue
-
-            try:
-                async with client_pool.acquire(account_id) as client:
-                    # 1. Check if it's a group or channel
-                    entity = await client.get_entity(clean_link)
-                    
-                    is_group = False
-                    if isinstance(entity, (types.Chat, types.ChatForbidden)):
-                        is_group = True
-                    elif isinstance(entity, types.Channel):
-                        if not entity.broadcast: # broadcast = channel, not broadcast = supergroup
+            for i, link in enumerate(links):
+                clean_link = _sanitize_link(link)
+                if not clean_link:
+                    await _safe_update(failed_inc=1)
+                    continue
+                
+                joined_inc = 0
+                failed_inc = 0
+                
+                try:
+                    async with client_pool.acquire(account_id) as client:
+                        entity = await client.get_entity(clean_link)
+                        is_group = False
+                        if isinstance(entity, (types.Chat, types.ChatForbidden)):
                             is_group = True
-                    
-                    if not is_group:
-                        await log.ainfo("joiner.skipping_channel", link=link)
-                        failed += 1
-                        continue
+                        elif isinstance(entity, types.Channel):
+                            if not entity.broadcast:
+                                is_group = True
+                        
+                        if not is_group:
+                            failed_inc = 1
+                        else:
+                            await client(functions.channels.JoinChannelRequest(channel=entity))
+                            
+                            # Refresh groups
+                            dialogs = await client.get_dialogs()
+                            new_groups = [
+                                {"id": d.id, "title": d.title, "is_selected": False}
+                                for d in dialogs if d.is_group or d.is_channel
+                            ]
+                            await account_groups_repo.save_groups(account_id, new_groups)
+                            joined_inc = 1
+                            
+                except UserAlreadyParticipantError:
+                    joined_inc = 1
+                except (ChatWriteForbiddenError, InviteRequestSentError):
+                    joined_inc = 1
+                except FloodWaitError as e:
+                    await log.awarning("joiner.flood_wait", seconds=e.seconds)
+                    failed_inc = 1
+                    await asyncio.sleep(min(e.seconds, 10))
+                except Exception as e:
+                    await log.aerror("joiner.error", error=str(e), link=link)
+                    failed_inc = 1
+                
+                await _safe_update(joined_inc=joined_inc, failed_inc=failed_inc)
+                
+                # Delay for each account independently (stay under 50/hour = 72s minimum)
+                if i < len(links) - 1:
+                    await asyncio.sleep(random.uniform(72, 85))
 
-                    # 2. Join
-                    await client(functions.channels.JoinChannelRequest(channel=entity))
-                    
-                    # 3. Refresh group list for this account in background
-                    # (Simplified: we'll just wait for the next full refresh or do it now)
-                    dialogs = await client.get_dialogs()
-                    new_groups = [
-                        {"id": d.id, "title": d.title, "is_selected": False}
-                        for d in dialogs if d.is_group or d.is_channel
-                    ]
-                    await account_groups_repo.save_groups(account_id, new_groups)
-                    
-                    joined += 1
-
-            except UserAlreadyParticipantError:
-                joined += 1 # Count as success since we are in
-            except (ChatWriteForbiddenError, InviteRequestSentError):
-                joined += 1 # Count as success if request sent or we can't write (still joined)
-            except FloodWaitError as e:
-                await log.awarning("joiner.flood_wait", seconds=e.seconds)
-                # If we hit flood, we might want to skip or wait
-                # For now, mark as failed and continue
-                failed += 1
-                await asyncio.sleep(min(e.seconds, 10)) # Don't wait too long in task
-            except Exception as e:
-                await log.aerror("joiner.error", error=str(e), link=link)
-                failed += 1
-
-            # Update progress
-            await update_callback(joined, failed, total_links)
-
-            # Delay logic (Random 30-60s to stay under 50/hour safely per account)
-            if i < total_links - 1:
-                await asyncio.sleep(random.uniform(15, 30))
-
-        await update_callback(joined, failed, total_links, "✅ Process Complete")
+        # Run all account workers concurrently
+        tasks = [_account_worker(account) for account in accounts]
+        await asyncio.gather(*tasks)
+        
+        await _safe_update(status="✅ Process Complete")
 
     except asyncio.CancelledError:
         await log.ainfo("joiner.cancelled", user_id=user_id)
-        await update_callback(joined, failed, total_links, "🛑 Process Cancelled")
+        if 'state' in locals():
+            async with state["lock"]:
+                await update_callback(state["joined"], state["failed"], total_joins, "🛑 Process Cancelled")
     except Exception as e:
         await log.aerror("joiner.fatal_error", error=str(e))
-        await update_callback(joined, failed, total_links, f"❌ Error: {str(e)[:20]}")
+        if 'state' in locals():
+            async with state["lock"]:
+                await update_callback(state["joined"], state["failed"], total_joins, f"❌ Error: {str(e)[:20]}")
     finally:
         _joiner_locks.pop(user_id, None)
         _active_joiners.pop(user_id, None)
