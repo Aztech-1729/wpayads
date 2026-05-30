@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     redis_prefix: str = "wpay"
 
     # ── Workers ─────────────────────────────────────────────
-    health_check_interval_seconds: int = 3600
+    health_check_interval_seconds: int = 300
     cache_refresh_interval_seconds: int = 120
     analytics_refresh_interval_seconds: int = 300
     worker_heartbeat_interval_seconds: int = 30

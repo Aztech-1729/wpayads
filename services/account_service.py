@@ -115,6 +115,63 @@ async def delete_all_accounts(owner_id: int) -> int:
     return count
 
 
+async def delete_limited_accounts(owner_id: int) -> int:
+    """Delete all accounts with health score below 50."""
+    from repositories import accounts_repo, account_groups_repo
+    
+    accounts = await accounts_repo.list_by_owner(owner_id)
+    count = 0
+    for acc in accounts:
+        # Limited status or low health score
+        if acc.health_score < 50:
+            acc_id = str(acc.id)
+            await accounts_repo.delete(acc_id)
+            await account_groups_repo.delete_by_account(acc_id)
+            await account_cache.invalidate_summary(acc_id)
+            count += 1
+            
+    await account_cache.invalidate_list(owner_id)
+    await dashboard_cache.invalidate(owner_id)
+    
+    await log.ainfo("account.deleted_limited", owner_id=owner_id, count=count)
+    return count
+
+
+async def handle_unauthorized_account(account_id: str) -> None:
+    """Permanently remove an account that is no longer authorized and notify owner."""
+    try:
+        from repositories import accounts_repo, account_groups_repo
+        from services import notification_service
+        
+        account = await accounts_repo.get(account_id)
+        if not account:
+            return
+
+        owner_id = account.owner_id
+        account_name = account.display_name
+
+        # 1. Delete from DB
+        await accounts_repo.delete(account_id)
+        await account_groups_repo.delete_by_account(account_id)
+
+        # 2. Evict from Pool
+        from telegram.client_pool import client_pool
+        await client_pool.evict(account_id)
+
+        # 3. Cleanup Caches
+        await _invalidate_caches(account_id, owner_id)
+        from cache import health_cache
+        await health_cache.invalidate_summary(owner_id)
+
+        # 3. Notify User
+        await notification_service.notify_account_removed(owner_id, account_name)
+        
+        await log.ainfo("account.auto_removed", account_id=account_id, owner_id=owner_id, reason="unauthorized")
+        
+    except Exception as e:
+        await log.aerror("account.auto_remove_failed", account_id=account_id, error=str(e))
+
+
 async def update_notes(account_id: str, owner_id: int, notes: str) -> None:
     """Update notes for an account."""
     account = await get_account(account_id)

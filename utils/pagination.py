@@ -23,7 +23,7 @@ class Paginator(Generic[T]):
         self,
         items: list[T],
         page: int = 1,
-        page_size: int = 20,
+        page_size: int = 10,
     ) -> None:
         self._items = items
         self._page_size = min(page_size, 20)  # Hard cap at 20
@@ -75,6 +75,7 @@ class Paginator(Generic[T]):
         """Serialize pagination metadata (for cache storage)."""
         return {
             "page": self._page,
+            "current_page": self._page,
             "page_size": self._page_size,
             "total_items": self.total_items,
             "total_pages": self._total_pages,

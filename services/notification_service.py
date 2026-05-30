@@ -80,6 +80,23 @@ async def notify_account_banned(
     await notify_user(user_id, message)
 
 
+async def notify_account_removed(
+    user_id: int,
+    account_name: str,
+    reason: str = "Unauthorized or Session Expired",
+) -> None:
+    """Notify user that an account has been removed automatically."""
+    message = (
+        f"🗑️ <b>Account Auto-Removed</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"Account: <b>{account_name}</b>\n"
+        f"Reason: <b>{reason}</b>\n\n"
+        f"<i>This account has been removed from the bot for your safety. "
+        f"Please re-add it if needed.</i>"
+    )
+    await notify_user(user_id, message)
+
+
 async def notify_campaign_completed(
     user_id: int,
     campaign_name: str,

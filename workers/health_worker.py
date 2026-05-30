@@ -60,6 +60,12 @@ async def check_single_account(account) -> None:
         async with client_pool.acquire(account.id) as client:
             # Refresh name from Telegram (to catch external changes)
             me = await client.get_me()
+            if not me:
+                await log.awarning("health_worker.auth_failed", account_id=account.id)
+                from services import account_service
+                await account_service.handle_unauthorized_account(account.id)
+                return
+
             new_name = f"{me.first_name} {me.last_name or ''}".strip() or me.username or account.phone
             if new_name != account.name:
                 await accounts_repo.update_name(account.id, new_name)

@@ -117,12 +117,8 @@ async def process_campaign(campaign) -> None:
         )
         task_acc_ids.append(account_id)
 
-    from telegram.logs_bot import send_campaign_start_log
-    await send_campaign_start_log(campaign.owner_id, campaign)
-
     await log.ainfo("forwarding_worker.starting_parallel_tasks", count=len(tasks), account_ids=task_acc_ids)
     
-    # Execute concurrently and track for cancellation
     from services.task_manager import register_task
     task_bundle = asyncio.gather(*tasks, return_exceptions=True)
     register_task(campaign.id, task_bundle)

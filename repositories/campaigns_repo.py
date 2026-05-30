@@ -42,7 +42,12 @@ async def get(campaign_id: str) -> Optional[Campaign]:
 
 async def list_by_owner(owner_id: int) -> list[Campaign]:
     """Get all campaigns for a user."""
-    cursor = _coll().find({"owner_id": owner_id}).sort("created_at", -1)
+    cursor = _coll().find({
+        "$or": [
+            {"owner_id": int(owner_id)},
+            {"owner_id": str(owner_id)},
+        ]
+    }).sort("created_at", -1)
     campaigns = []
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])

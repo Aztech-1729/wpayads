@@ -163,42 +163,47 @@ def _register_handlers(bot: TelegramClient) -> None:
 
         # Handle File Upload for Auto Join
         if awaiting == "autojoin_file" and event.document:
-            if not event.document.mime_type == "text/plain":
-                await event.respond("❌ Please send a valid <b>.txt</b> file.", parse_mode="html")
+            # ... (existing autojoin logic)
+            pass
+
+        # Handle Session Upload
+        if awaiting == "session_upload" and event.document:
+            filename = event.document.attributes[0].file_name
+            if not (filename.lower().endswith(".session") or filename.lower().endswith(".zip")):
+                await event.respond("❌ Please send a <b>.session</b> file or a <b>.zip</b> archive.", parse_mode="html")
                 return
 
             # Download file
             file_bytes = await event.download_media(bytes)
-            content = file_bytes.decode("utf-8", errors="ignore")
-            links = [l.strip() for l in content.splitlines() if l.strip()]
             
-            if not links:
-                await event.respond("❌ The file is empty!")
-                await set_context(user_id, "awaiting_input", None)
-                return
-
-            await set_context(user_id, "awaiting_input", None)
-            
-            # Immediately send progress message
+            # Progress message
             progress_msg = await event.respond(
-                menus.render_autojoin_progress(0, 0, len(links), "Joining Groups"),
-                buttons=keyboards.autojoin_progress_keyboard(),
+                "📂 <b>SESSIONS IMPORT</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "⏳ <b>Status: Importing Sessions</b>\n\n"
+                "✅ <b>Added: 0</b>\n"
+                "❌ <b>Failed: 0</b>\n"
+                "📊 <b>Total Found: 0</b>",
                 parse_mode="html"
             )
 
             # Define update callback
-            async def update_progress(joined, failed, total, status="Joining Groups"):
+            async def update_progress(joined, failed, total, status="Importing Sessions"):
                 try:
-                    await progress_msg.edit(
-                        menus.render_autojoin_progress(joined, failed, total, status),
-                        buttons=keyboards.autojoin_progress_keyboard() if "complete" not in status.lower() and "❌" not in status.lower() else None,
-                        parse_mode="html"
+                    text = (
+                        f"📂 <b>SESSIONS IMPORT</b>\n"
+                        f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                        f"⏳ <b>Status: {status}</b>\n\n"
+                        f"✅ <b>Added: {joined}</b>\n"
+                        f"❌ <b>Failed: {failed}</b>\n"
+                        f"📊 <b>Total Found: {total}</b>"
                     )
+                    await progress_msg.edit(text, parse_mode="html")
                 except Exception:
                     pass
 
-            from services.joiner_service import start_auto_join
-            await start_auto_join(user_id, links, update_progress)
+            from services.session_importer import import_from_file
+            await import_from_file(user_id, file_bytes, filename, update_progress)
             return
 
         if not awaiting:

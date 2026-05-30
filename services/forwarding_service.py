@@ -15,6 +15,9 @@ from telethon.errors import (
     ChatWriteForbiddenError,
     FloodWaitError,
     UserBannedInChannelError,
+    SlowModeWaitError,
+    UserDeactivatedError,
+    AuthKeyUnregisteredError,
 )
 
 from core.config import get_settings
@@ -44,7 +47,45 @@ async def safe_forward(
     for attempt in range(retries):
         try:
             sent_msgs = None
-            if topic_id:
+            
+            # Resolve target entity to avoid "Could not find input entity" errors
+            if isinstance(target, (int, str)):
+                resolved = False
+                # Step 1: Try cached lookup (fast path)
+                try:
+                    target = await client.get_input_entity(target)
+                    resolved = True
+                except Exception:
+                    pass
+
+                # Step 2: Try get_entity with -100 prefix for channels
+                if not resolved and isinstance(target, int) and target > 0:
+                    try:
+                        target = await client.get_entity(int(f"-100{target}"))
+                        resolved = True
+                    except Exception:
+                        pass
+
+                # Step 3: Try get_entity with the raw ID
+                if not resolved:
+                    try:
+                        target = await client.get_entity(target)
+                        resolved = True
+                    except Exception:
+                        pass
+
+                # Step 4: Last resort — populate cache via get_dialogs
+                if not resolved:
+                    try:
+                        await client.get_dialogs()
+                        target = await client.get_input_entity(target)
+                    except Exception:
+                        pass  # Fallback to using the raw ID if all resolution fails
+
+            # Logic: If it's a string, we MUST use send_message.
+            # If it's a message object AND there's a topic, we use send_message (resends the object).
+            # If it's a message object AND NO topic, we use forward_messages (preserves "Forwarded from").
+            if isinstance(message, str) or topic_id:
                 sent_msgs = await client.send_message(
                     target,
                     message,
@@ -141,6 +182,13 @@ async def safe_forward(
                 error_message=str(e),
             )
             await metrics.increment(MESSAGES_FAILED)
+            return False
+
+        except (UserDeactivatedError, AuthKeyUnregisteredError) as e:
+            # Account is gone or session revoked
+            await log.aerror("forward.account_invalid", account_id=account_id, error=str(e))
+            from services import account_service
+            await account_service.handle_unauthorized_account(account_id)
             return False
 
         except Exception as e:

@@ -4,6 +4,7 @@ Campaign service — Campaign lifecycle management.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from cache import campaign_cache, dashboard_cache
@@ -104,12 +105,62 @@ async def resume_campaign(campaign_id: str, owner_id: int) -> None:
 
     await campaigns_repo.update_status(campaign_id, CampaignStatus.ACTIVE)
     
+    # Notify via Logs Bot
+    from telegram.logs_bot import send_campaign_start_log
+    await send_campaign_start_log(owner_id, campaign)
+
     # Instant Wakeup: Trigger the forwarding worker
     from services.forwarding_trigger import trigger_forwarding
     trigger_forwarding()
 
     await _invalidate_caches(owner_id, campaign_id)
     await log.ainfo("campaign.resumed", campaign_id=campaign_id)
+
+
+async def select_all_accounts(campaign_id: str, owner_id: int) -> None:
+    """Add all of user's accounts to a campaign with all their groups selected."""
+    from repositories import accounts_repo, account_groups_repo, campaigns_repo
+    
+    # 1. Get all accounts
+    accounts = await accounts_repo.list_by_owner(owner_id)
+    
+    # 2. Build account_ids list and flat group_ids list
+    acc_ids = []
+    all_group_ids = []
+    
+    for acc in accounts:
+        acc_id_str = str(acc.id)
+        acc_ids.append(acc_id_str)
+        
+        # Get all groups for this account
+        group_ids = await account_groups_repo.get_all_group_ids(acc_id_str)
+        for gid in group_ids:
+            if gid not in all_group_ids:
+                all_group_ids.append(gid)
+        
+    # 3. Update campaign
+    await campaigns_repo.update_fields(campaign_id, {
+        "account_ids": acc_ids,
+        "group_ids": all_group_ids,
+        "updated_at": datetime.utcnow()
+    })
+    
+    await _invalidate_caches(owner_id, campaign_id)
+    await log.ainfo("campaign.select_all_accounts", campaign_id=campaign_id, acc_count=len(acc_ids), grp_count=len(all_group_ids))
+
+async def unselect_all_accounts(campaign_id: str, owner_id: int) -> None:
+    """Remove all accounts and groups from a campaign."""
+    from repositories import campaigns_repo
+    
+    # Empty out accounts and groups
+    await campaigns_repo.update_fields(campaign_id, {
+        "account_ids": [],
+        "group_ids": [],
+        "updated_at": datetime.utcnow()
+    })
+    
+    await _invalidate_caches(owner_id, campaign_id)
+    await log.ainfo("campaign.unselect_all_accounts", campaign_id=campaign_id)
 
 
 async def delete_campaign(campaign_id: str, owner_id: int) -> None:

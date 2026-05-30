@@ -129,6 +129,36 @@ async def on_accounts_delete_all(event: events.CallbackQuery.Event) -> None:
     await event.edit(text, buttons=buttons, parse_mode="html")
 
 
+async def on_accounts_delete_limited(event: events.CallbackQuery.Event) -> None:
+    """Prompt for confirmation before deleting limited accounts."""
+    await event.answer()
+    text = (
+        "⚠️ <b>REMOVE LIMITED ACCOUNTS</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Are you sure you want to remove <b>ALL</b> accounts with a health score below 50?\n"
+        "This will help clean up accounts that are likely to fail."
+    )
+    buttons = keyboards.confirm_keyboard("delete_limited_accounts", "limited")
+    await event.edit(text, buttons=buttons, parse_mode="html")
+
+
+async def on_account_upload_sessions(event: events.CallbackQuery.Event) -> None:
+    """Prompt user to upload a .session or .zip file."""
+    await event.answer()
+    text = (
+        "📂 <b>UPLOAD SESSIONS</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Please send a <b>.session</b> file or a <b>.zip</b> archive containing sessions.\n\n"
+        "ℹ️ <b>Tips:</b>\n"
+        "├ 1. Sessions will be automatically validated.\n"
+        "├ 2. Valid accounts will be added to your list.\n"
+        "└ 3. All sessions are securely encrypted."
+    )
+    buttons = keyboards.back_keyboard(CB.ACCOUNTS)
+    await event.edit(text, buttons=buttons, parse_mode="html")
+    await set_context(event.sender_id, "awaiting_input", "session_upload")
+
+
 async def on_account_health(event: events.CallbackQuery.Event, account_id: str) -> None:
     """Display account health details."""
     await event.answer()  # LINE 1. Non-negotiable.
@@ -187,12 +217,27 @@ async def on_campaigns(event: events.CallbackQuery.Event) -> None:
     buttons = keyboards.campaign_list_keyboard(campaigns_list, pagination)
     await event.edit(text, buttons=buttons, parse_mode="html")
 
+async def _get_campaign_summary(campaign_id: str) -> dict:
+    from cache import campaign_cache
+    data = await campaign_cache.get_summary(campaign_id)
+    if not data:
+        from repositories import campaigns_repo
+        c = await campaigns_repo.get(campaign_id)
+        if c:
+            data = c.model_dump(mode="json")
+            data["account_count"] = len(c.account_ids)
+            data["group_count"] = len(c.group_ids)
+            data["success_count"] = c.stats.success_count if hasattr(c.stats, "success_count") else 0
+            data["failure_count"] = c.stats.failure_count if hasattr(c.stats, "failure_count") else 0
+            await campaign_cache.set_summary(campaign_id, data)
+    return data or {}
 
 async def on_campaign_view(event: events.CallbackQuery.Event, campaign_id: str) -> None:
     """Display campaign details."""
     await event.answer()  # LINE 1. Non-negotiable.
     await push_screen(event.sender_id, "campaign_detail", {"campaign_id": campaign_id})
-    data = await campaign_cache.get_summary(campaign_id)
+    data = await _get_campaign_summary(campaign_id)
+    from telegram import menus, keyboards
     text = menus.render_campaign_detail(data)
     status = data.get("status", "UNKNOWN") if data else "UNKNOWN"
     buttons = keyboards.campaign_detail_keyboard(campaign_id, status)
@@ -253,51 +298,107 @@ async def on_campaign_set_rounds(event: events.CallbackQuery.Event, action: str,
         await campaign_service.update_campaign(campaign_id, max_rounds=0)
         await on_campaign_view(event, campaign_id)
 
-async def on_campaign_manage_accounts(event: events.CallbackQuery.Event, action: str, campaign_id: str, account_id: str = "") -> None:
+async def on_campaign_manage_accounts(event: events.CallbackQuery.Event, campaign_id: str, page: int = 1) -> None:
+    """Display the accounts management screen for a campaign with pagination."""
     await event.answer()
-    from services import campaign_service
-    from repositories import accounts_repo
-    
-    # Get all active accounts directly from DB for management
-    accounts = await accounts_repo.list_by_owner(event.sender_id)
-    
-    if action == "toggle" and account_id:
-        # Toggle logic
-        from repositories import account_groups_repo
-        camp = await campaign_service.get_campaign(campaign_id)
-        if camp:
-            current_ids = camp.account_ids
-            current_groups = camp.group_ids
-            all_account_groups = await account_groups_repo.get_all_group_ids(account_id)
-            
-            if account_id in current_ids:
-                current_ids.remove(account_id)
-                # Remove all account groups from current_groups
-                current_groups = [gid for gid in current_groups if gid not in all_account_groups]
-            else:
-                current_ids.append(account_id)
-                # Add all account groups to current_groups
-                for gid in all_account_groups:
-                    if gid not in current_groups:
-                        current_groups.append(gid)
-                        
-            await campaign_service.update_campaign(campaign_id, account_ids=current_ids, group_ids=current_groups)
-            
-    camp = await campaign_service.get_campaign(campaign_id)
-    assigned_ids = camp.account_ids if camp else []
-    total_acc = len(assigned_ids)
-    total_grp = len(camp.group_ids) if camp else 0
-    
+    from cache import account_cache, campaign_cache
+
+    data = await account_cache.get_page(event.sender_id, page)
+    if not data:
+        from workers.cache_worker import warm_user_cache
+        await warm_user_cache(event.sender_id)
+        data = await account_cache.get_page(event.sender_id, page)
+
+    campaign = await _get_campaign_summary(campaign_id)
+    assigned_ids = campaign.get("account_ids", []) if campaign else []
+
+    accounts = data.get("accounts", []) if data else []
+    pagination = data.get("pagination", {}) if data else {"current_page": page, "total_pages": 1}
+
     text = (
-        f"👥 <b>Manage Accounts</b>\n\n"
-        f"<b>Total Accounts:</b> {total_acc}\n"
-        f"<b>Total Groups:</b> {total_grp}\n\n"
-        f"Select the accounts to run this campaign:"
+        f"👥 <b>MANAGE ACCOUNTS</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        f"<b>Campaign:</b> {campaign.get('name', 'Untitled') if campaign else '—'}\n"
+        f"<b>Assigned:</b> {len(assigned_ids)} accounts\n\n"
+        f"Select accounts to use for this campaign."
     )
     await set_context(event.sender_id, "cmp_active", campaign_id)
-    await event.edit(text, buttons=keyboards.campaign_manage_accounts_keyboard(campaign_id, accounts, assigned_ids), parse_mode="html")
+    buttons = keyboards.campaign_manage_accounts_keyboard(campaign_id, accounts, assigned_ids, pagination)
+    await event.edit(text, buttons=buttons, parse_mode="html")
+async def on_campaign_select_all_accounts(event: events.CallbackQuery.Event, campaign_id: str) -> None:
+    """Prompt for confirmation to add all accounts."""
+    await event.answer()
+    text = (
+        "✅ <b>SELECT ALL ACCOUNTS</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Add <b>ALL</b> your accounts to this campaign?\n"
+        "This will also select <b>ALL joined groups</b> for every account."
+    )
+    buttons = keyboards.confirm_keyboard("select_all_accounts", campaign_id)
+    await event.edit(text, buttons=buttons, parse_mode="html")
 
-async def on_campaign_account_detail(event: events.CallbackQuery.Event, account_id: str) -> None:
+async def on_campaign_unselect_all_accounts(event: events.CallbackQuery.Event, campaign_id: str) -> None:
+    """Prompt for confirmation to remove all accounts."""
+    await event.answer()
+    text = (
+        "❌ <b>UNSELECT ALL ACCOUNTS</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Remove <b>ALL</b> your accounts from this campaign?\n"
+        "This will pause all active operations for this campaign."
+    )
+    buttons = keyboards.confirm_keyboard("unselect_all_accounts", campaign_id)
+    await event.edit(text, buttons=buttons, parse_mode="html")
+
+
+async def on_campaign_account_toggle(event: events.CallbackQuery.Event) -> None:
+    """Toggle an account's assignment to the active campaign."""
+    await event.answer("Updating campaign...")
+    from services import campaign_service
+    from repositories import account_groups_repo
+    
+    campaign_id = await get_context(event.sender_id, "cmp_active")
+    account_id = await get_context(event.sender_id, "acc_active")
+    
+    if not campaign_id or not account_id:
+        await event.answer("❌ Error: Missing context.", alert=True)
+        return
+        
+    camp = await campaign_service.get_campaign(campaign_id)
+    if not camp:
+        return
+        
+    # Force all IDs to strings to ensure consistent matching
+    current_ids = [str(aid) for aid in camp.account_ids]
+    current_groups = [str(gid) for gid in camp.group_ids]
+    account_id_str = str(account_id)
+    
+    # Get all groups for this account to add/remove them as well
+    all_account_groups = await account_groups_repo.get_all_group_ids(account_id_str)
+    
+    # Create fresh copies of lists
+    new_acc_ids = list(current_ids)
+    new_grp_ids = list(current_groups)
+    
+    if account_id_str in new_acc_ids:
+        # REMOVE
+        new_acc_ids.remove(account_id_str)
+        # Filter out all groups belonging to this account
+        new_grp_ids = [gid for gid in new_grp_ids if gid not in all_account_groups]
+    else:
+        # ADD
+        new_acc_ids.append(account_id_str)
+        for gid in all_account_groups:
+            if gid not in new_grp_ids:
+                new_grp_ids.append(gid)
+                
+    await campaign_service.update_campaign(campaign_id, account_ids=new_acc_ids, group_ids=new_grp_ids)
+    
+    # Return to detail view to show updated state
+    await on_campaign_acc_detail(event, account_id)
+
+
+async def on_campaign_acc_detail(event: events.CallbackQuery.Event, account_id: str) -> None:
+
     """Show details for an account inside a campaign context."""
     await event.answer()
     from services import campaign_service
@@ -309,7 +410,9 @@ async def on_campaign_account_detail(event: events.CallbackQuery.Event, account_
     await set_context(event.sender_id, "acc_active", account_id)
     
     camp = await campaign_service.get_campaign(campaign_id)
-    is_assigned = account_id in (camp.account_ids if camp else [])
+    # Ensure ID comparison uses strings to avoid mismatch
+    assigned_ids = [str(aid) for aid in (camp.account_ids if camp else [])]
+    is_assigned = str(account_id) in assigned_ids
     
     account = await accounts_repo.get(account_id)
     if not account:
@@ -342,7 +445,8 @@ async def on_campaign_account_groups(event: events.CallbackQuery.Event, page: in
         return
         
     camp = await campaign_service.get_campaign(campaign_id)
-    assigned_group_ids = camp.group_ids if camp else []
+    # Normalize current groups to strings
+    assigned_group_ids = [str(gid) for gid in (camp.group_ids if camp else [])]
     
     groups, pagination = await account_groups_repo.get_groups_paginated(account_id, page, 10)
     
@@ -368,19 +472,22 @@ async def on_campaign_group_bulk(event: events.CallbackQuery.Event, action: str)
     if not camp:
         return
         
-    current_groups = camp.group_ids
-    all_account_groups = await account_groups_repo.get_all_group_ids(account_id)
+    # Force all IDs to strings to ensure consistent matching
+    current_groups = [str(gid) for gid in camp.group_ids]
+    all_account_groups = [str(gid) for gid in await account_groups_repo.get_all_group_ids(account_id)]
+    
+    new_grp_ids = list(current_groups)
     
     if action == "all":
-        # Add all account groups that aren't already in current_groups
+        # Add all account groups that aren't already in new_grp_ids
         for gid in all_account_groups:
-            if gid not in current_groups:
-                current_groups.append(gid)
+            if gid not in new_grp_ids:
+                new_grp_ids.append(gid)
     elif action == "none":
-        # Remove all account groups from current_groups
-        current_groups = [gid for gid in current_groups if gid not in all_account_groups]
+        # Remove all account groups from new_grp_ids
+        new_grp_ids = [gid for gid in new_grp_ids if gid not in all_account_groups]
         
-    await campaign_service.update_campaign(campaign_id, group_ids=current_groups)
+    await campaign_service.update_campaign(campaign_id, group_ids=new_grp_ids)
     
     await on_campaign_account_groups(event, 1)
 
@@ -398,13 +505,17 @@ async def on_campaign_toggle_group(event: events.CallbackQuery.Event, group_id_s
     if not camp:
         return
         
-    current_groups = camp.group_ids
-    if group_id_str in current_groups:
-        current_groups.remove(group_id_str)
+    # Normalize IDs
+    current_groups = [str(gid) for gid in camp.group_ids]
+    gid_str = str(group_id_str)
+    
+    new_grp_ids = list(current_groups)
+    if gid_str in new_grp_ids:
+        new_grp_ids.remove(gid_str)
     else:
-        current_groups.append(group_id_str)
+        new_grp_ids.append(gid_str)
         
-    await campaign_service.update_campaign(campaign_id, group_ids=current_groups)
+    await campaign_service.update_campaign(campaign_id, group_ids=new_grp_ids)
     
     # Since we dropped page from toggle_grp, we will just route back to page 1 for now.
     await on_campaign_account_groups(event, 1)
@@ -503,18 +614,18 @@ async def on_health_settings_toggle(event: events.CallbackQuery.Event) -> None:
     await event.edit(text, buttons=buttons, parse_mode="html")
 
 
-async def on_health_view_all(event: events.CallbackQuery.Event) -> None:
+async def on_health_view_all(event: events.CallbackQuery.Event, page: int = 1) -> None:
     """Display paginated list of accounts with health info."""
     await event.answer("Fetching health data...")
     await push_screen(event.sender_id, "health_all")
     await set_context(event.sender_id, "view_source", "health_all")
     # For now, just use the account list keyboard since it shows health dots!
     from cache import account_cache
-    data = await account_cache.get_page(event.sender_id, 1)
+    data = await account_cache.get_page(event.sender_id, page)
     if not data:
         from workers.cache_worker import warm_user_cache
         await warm_user_cache(event.sender_id)
-        data = await account_cache.get_page(event.sender_id, 1)
+        data = await account_cache.get_page(event.sender_id, page)
 
     accounts = data.get("accounts", []) if data else []
     pagination = data.get("pagination", {}) if data else {}
@@ -524,21 +635,27 @@ async def on_health_view_all(event: events.CallbackQuery.Event) -> None:
         "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Select an account to view detailed stats and health checks."
     )
-    buttons = keyboards.account_list_keyboard(accounts, pagination, action_prefix="acc:view", show_actions=False)
+    buttons = keyboards.account_list_keyboard(
+        accounts, 
+        pagination, 
+        action_prefix="acc:view", 
+        show_actions=False,
+        screen="health_all"
+    )
     await event.edit(text, buttons=buttons, parse_mode="html")
 
 
 # ── Groups ──────────────────────────────────────────────────
 
-async def on_groups_menu(event: events.CallbackQuery.Event) -> None:
+async def on_groups_menu(event: events.CallbackQuery.Event, page: int = 1) -> None:
     """Display accounts list to select for groups management."""
     await event.answer()
     from cache import account_cache
-    data = await account_cache.get_page(event.sender_id, 1)
+    data = await account_cache.get_page(event.sender_id, page)
     if not data:
         from workers.cache_worker import warm_user_cache
         await warm_user_cache(event.sender_id)
-        data = await account_cache.get_page(event.sender_id, 1)
+        data = await account_cache.get_page(event.sender_id, page)
 
     accounts = data.get("accounts", []) if data else []
     pagination = data.get("pagination", {}) if data else {}
@@ -765,6 +882,13 @@ async def on_page_next(event: events.CallbackQuery.Event, screen: str, page: int
         text = f"📢 <b>Campaigns</b>\n━━━━━━━━━━━━━━━━━━━━━━━━"
         buttons = keyboards.campaign_list_keyboard(campaigns_list, pagination)
         await event.edit(text, buttons=buttons, parse_mode="html")
+    elif screen == "cmp_acc":
+        campaign_id = await get_context(event.sender_id, "cmp_active")
+        await on_campaign_manage_accounts(event, campaign_id, page=page)
+    elif screen == "health_all":
+        await on_health_view_all(event, page=page)
+    elif screen == "groups_menu":
+        await on_groups_menu(event, page=page)
 
 
 async def on_page_prev(event: events.CallbackQuery.Event, screen: str, page: int) -> None:
@@ -789,6 +913,18 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             from services import account_service
             await account_service.delete_all_accounts(event.sender_id)
             text = "✅ All accounts removed."
+        elif action == "delete_limited_accounts":
+            from services import account_service
+            count = await account_service.delete_limited_accounts(event.sender_id)
+            text = f"✅ {count} limited accounts removed."
+        elif action == "select_all_accounts":
+            from services import campaign_service
+            await campaign_service.select_all_accounts(target_id, event.sender_id)
+            text = "✅ All accounts added to campaign."
+        elif action == "unselect_all_accounts":
+            from services import campaign_service
+            await campaign_service.unselect_all_accounts(target_id, event.sender_id)
+            text = "✅ All accounts removed from campaign."
         elif action == "pause_account":
             from services import account_service
             await account_service.pause_account(target_id, event.sender_id)
@@ -878,6 +1014,8 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
         CB.NOOP: on_noop,
         CB.ACCOUNT_ADD: on_account_add,
         CB.ACCOUNT_DELETE_ALL: on_accounts_delete_all,
+        CB.ACCOUNT_DELETE_LIMITED: on_accounts_delete_limited,
+        CB.ACCOUNT_UPLOAD_SESSIONS: on_account_upload_sessions,
         CB.CAMPAIGN_CREATE: on_campaign_create,
         CB.CONFIRM_NO: on_confirm_no,
         CB.SETTINGS_AUTOREPLY: on_autoreply_menu,
@@ -950,15 +1088,18 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
             await on_campaign_set_rounds(event, parts[2], parts[3])
     elif data.startswith("cmp:manage_acc:"):
         campaign_id = data.split(":")[2]
-        await on_campaign_manage_accounts(event, "menu", campaign_id)
+        await on_campaign_manage_accounts(event, campaign_id)
+    elif data.startswith("cmp:all_acc:"):
+        campaign_id = data.split(":")[2]
+        await on_campaign_select_all_accounts(event, campaign_id)
+    elif data.startswith("cmp:unall_acc:"):
+        campaign_id = data.split(":")[2]
+        await on_campaign_unselect_all_accounts(event, campaign_id)
     elif data.startswith("cmp:toggle_acc"):
-        campaign_id = await get_context(event.sender_id, "cmp_active")
-        account_id = await get_context(event.sender_id, "acc_active")
-        if campaign_id and account_id:
-            await on_campaign_manage_accounts(event, "toggle", campaign_id, account_id)
+        await on_campaign_account_toggle(event)
     elif data.startswith("cmp:acc_detail:"):
         _, _, account_id = data.split(":")
-        await on_campaign_account_detail(event, account_id)
+        await on_campaign_acc_detail(event, account_id)
     elif data.startswith("cmp:acc_groups:"):
         _, _, page = data.split(":")
         await on_campaign_account_groups(event, int(page))

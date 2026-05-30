@@ -61,7 +61,8 @@ def account_list_keyboard(
     accounts: list[dict],
     pagination: dict,
     action_prefix: str = "acc:view",
-    show_actions: bool = True
+    show_actions: bool = True,
+    screen: str = "accounts"
 ) -> list[list[Button]]:
     """Account list with account buttons, pagination, and actions."""
     rows: list[list[Button]] = []
@@ -86,18 +87,22 @@ def account_list_keyboard(
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline("⏪ First", f"page:next:accounts:1"))
-            nav_row.append(Button.inline("◀ Prev", f"page:prev:accounts:{current - 1}"))
+            nav_row.append(Button.inline(_b("⏪ First"), f"page:next:{screen}:1"))
+            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:{screen}:{current - 1}"))
         nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
         if current < total:
-            nav_row.append(Button.inline("Next ▶", f"page:next:accounts:{current + 1}"))
-            nav_row.append(Button.inline("Last ⏩", f"page:next:accounts:{total}"))
+            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:{screen}:{current + 1}"))
+            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:{screen}:{total}"))
         rows.append(nav_row)
 
     # Action row
     if show_actions:
         rows.append([
             Button.inline(_b("➕ Add Account"), CB.ACCOUNT_ADD),
+            Button.inline(_b("📂 Upload Sessions"), CB.ACCOUNT_UPLOAD_SESSIONS),
+        ])
+        rows.append([
+            Button.inline(_b("🗑 Remove Limited"), CB.ACCOUNT_DELETE_LIMITED),
             Button.inline(_b("🗑 Remove All"), CB.ACCOUNT_DELETE_ALL),
         ])
         rows.append([
@@ -260,30 +265,64 @@ def campaign_set_rounds_keyboard(campaign_id: str, max_rounds: int = 0) -> list[
     ]
 
 
-def campaign_manage_accounts_keyboard(campaign_id: str, accounts: list[Any], assigned_ids: list[str]) -> list[list[Button]]:
-    """Menu to select accounts for a campaign."""
+def campaign_manage_accounts_keyboard(
+    campaign_id: str, 
+    accounts: list[Any], 
+    assigned_ids: list[str],
+    pagination: dict
+) -> list[list[Button]]:
+    """Menu to select accounts for a campaign with pagination."""
     rows = []
+    
+    # 1. Quick Actions
+    total_items = pagination.get("total_items", 0)
+    if total_items > 0 and len(assigned_ids) >= total_items:
+        rows.append([
+            Button.inline(_b("❌ Unselect All Accounts"), f"cmp:unall_acc:{campaign_id}"),
+        ])
+    else:
+        rows.append([
+            Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}"),
+        ])
+
+    # 2. Accounts List
     for acc in accounts:
-        acc_id = str(acc.id)
-        phone = acc.phone or "Unknown"
+        acc_id = str(acc.get("id", ""))
+        phone = acc.get("phone", "Unknown")
         mark = "🟢" if acc_id in assigned_ids else "🔴"
         rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}")])
     
-    rows.append([Button.inline("← Back", f"cmp:view:{campaign_id}")])
+    # 3. Pagination
+    current = pagination.get("current_page", 1)
+    total = pagination.get("total_pages", 1)
+    
+    if total > 1:
+        nav_row = []
+        if current > 1:
+            nav_row.append(Button.inline(_b("⬅️ Prev"), f"page:prev:cmp_acc:{current-1}"))
+        
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+        
+        if current < total:
+            nav_row.append(Button.inline(_b("Next ➡️"), f"page:next:cmp_acc:{current+1}"))
+        rows.append(nav_row)
+
+    # 4. Back
+    rows.append([Button.inline(_b("← Back"), f"cmp:view:{campaign_id}")])
     return rows
 
 
 def campaign_account_detail_keyboard(campaign_id: str, account_id: str, is_assigned: bool) -> list[list[Button]]:
     """Account details within a campaign."""
-    toggle_text = "❌ Remove from Campaign" if is_assigned else "✅ Add to Campaign"
+    toggle_text = _b("❌ Remove from Campaign") if is_assigned else _b("✅ Add to Campaign")
     rows = [
         [
             Button.inline(toggle_text, "cmp:toggle_acc"),
         ],
         [
-            Button.inline("👥 Select Groups", "cmp:acc_groups:1"),
+            Button.inline(_b("👥 Select Groups"), "cmp:acc_groups:1"),
         ],
-        [Button.inline("← Back", f"cmp:manage_acc:{campaign_id}")],
+        [Button.inline(_b("← Back"), f"cmp:manage_acc:{campaign_id}")],
     ]
     return rows
 
@@ -301,7 +340,7 @@ def campaign_account_groups_keyboard(
     # Add groups (2 per row for compactness)
     current_row = []
     for g in groups:
-        group_id_str = str(g.get("_id"))
+        group_id_str = str(g.get("_id") or g.get("id", ""))
         mark = "✅" if group_id_str in assigned_group_ids else "❌"
         title = g.get("title", "Unknown")
         # Truncate title
@@ -428,11 +467,8 @@ def groups_list_keyboard(
     return buttons
 
 def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[list[Button]]:
-    """Accounts list with Auto Join button at the top."""
+    """Accounts list with Auto Join button at the bottom."""
     rows = []
-    
-    # Auto Join at the top
-    rows.append([Button.inline(_b("🤖 Auto Join Groups"), CB.AUTO_JOIN)])
     
     # Accounts
     for acc in accounts:
@@ -443,12 +479,27 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
         rows.append([
             Button.inline(
                 f"{dot} {phone}  •  Health: {health}",
-                f"groups:view:{acc_id}",
+                f"groups:view:{acc_id}:1",
             )
         ])
         
-    # Pagination... (re-using part of account_list_keyboard logic if needed, but let's keep it simple)
+    # Pagination
+    current = pagination.get("current_page", 1)
+    total = pagination.get("total_pages", 1)
+    
+    if total > 1:
+        nav_row = []
+        if current > 1:
+            nav_row.append(Button.inline(_b("⏪ First"), "page:next:groups_menu:1"))
+            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:groups_menu:{current - 1}"))
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+        if current < total:
+            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:groups_menu:{current + 1}"))
+            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:groups_menu:{total}"))
+        rows.append(nav_row)
+        
     # Action Row
+    rows.append([Button.inline(_b("🤖 Auto Join Groups"), CB.AUTO_JOIN)])
     rows.append([Button.inline(_b("← Back"), CB.DASHBOARD)])
     return rows
 

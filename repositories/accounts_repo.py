@@ -76,7 +76,12 @@ async def list_by_owner(owner_id: int) -> list[Account]:
 
 async def count_by_owner(owner_id: int) -> int:
     """Count accounts owned by a user."""
-    return await _coll().count_documents({"owner_id": owner_id})
+    return await _coll().count_documents({
+        "$or": [
+            {"owner_id": int(owner_id)},
+            {"owner_id": str(owner_id)},
+        ]
+    })
 
 
 async def update_status(account_id: str, status: str) -> bool:

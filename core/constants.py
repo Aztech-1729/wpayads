@@ -164,7 +164,7 @@ class CB:
     SETTINGS = "settings"
     GROUPS = "groups"
     # Groups
-    GROUPS_VIEW = "groups:view:{account_id}"
+    GROUPS_VIEW = "groups:view:{account_id}:{page}"
     GROUPS_TOGGLE = "groups:toggle:{account_id}:{group_id}:{page}"
     GROUPS_SELECT_ALL = "groups:all:{account_id}:{page}"
     AUTO_JOIN = "groups:autojoin"
@@ -178,6 +178,8 @@ class CB:
     ACCOUNT_ADD = "acc:add"
     ACCOUNT_DELETE = "acc:del:{account_id}"
     ACCOUNT_DELETE_ALL = "acc:delall"
+    ACCOUNT_DELETE_LIMITED = "acc:dellimited"
+    ACCOUNT_UPLOAD_SESSIONS = "acc:upload"
     ACCOUNT_PAUSE = "acc:pause:{account_id}"
     ACCOUNT_RESUME = "acc:resume:{account_id}"
     ACCOUNT_HEALTH = "acc:health:{account_id}"

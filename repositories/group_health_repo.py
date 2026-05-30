@@ -40,12 +40,12 @@ async def get_health_score(group_id: str) -> int:
     Calculate health score (0-100) for a group.
     
     Factors:
-    - Success rate (60%)
-    - Flood rate penalty (40%)
+    - Success rate (70%)
+    - Flood rate penalty (30%)
     """
     doc = await _coll().find_one({"group_id": group_id})
-    if not doc or doc.get("total_attempts", 0) < 5:
-        return 100 # Default to safe until proven otherwise
+    if not doc or doc.get("total_attempts", 0) < 10:
+        return 100 # Default to safe until we have enough data (min 10)
         
     total = doc["total_attempts"]
     success_rate = doc["success_count"] / total
@@ -53,9 +53,9 @@ async def get_health_score(group_id: str) -> int:
     
     # Calculate score
     # High success = high score
-    # High flood = massive penalty
+    # Flood penalty reduced to 150 (max 30% impact)
     base_score = success_rate * 100
-    flood_penalty = flood_rate * 200 # Flood is very bad
+    flood_penalty = flood_rate * 150 
     
     final_score = max(0, min(100, round(base_score - flood_penalty)))
     return final_score
