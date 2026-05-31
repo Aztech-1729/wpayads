@@ -1029,16 +1029,16 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
         elif action == "bulk_leave_groups":
             from telegram.menus import render_bulk_progress
             from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
-            await event.edit(render_bulk_progress("Leave Groups", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
+            await event.edit(render_bulk_progress("Leave Groups/Channels", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
                 async def update_progress(success, failed, total):
                     try:
-                        await event.edit(render_bulk_progress("Leave Groups", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                        await event.edit(render_bulk_progress("Leave Groups/Channels", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
                     except Exception: pass
                 success, failed = await bulk_service.bulk_leave_groups(event.sender_id, progress_callback=update_progress)
                 try:
-                    await event.edit(render_bulk_progress("Leave Groups", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                    await event.edit(render_bulk_progress("Leave Groups/Channels", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())

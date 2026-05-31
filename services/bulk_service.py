@@ -53,9 +53,14 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
 
     async def _task(acc):
         try:
-            async with client_pool.acquire(str(acc.id)) as client:
-                await action_func(client, acc)
-                return True
+            async def _run_inner():
+                async with client_pool.acquire(str(acc.id)) as client:
+                    await action_func(client, acc)
+            await asyncio.wait_for(_run_inner(), timeout=60.0)
+            return True
+        except asyncio.TimeoutError:
+            await log.aerror("bulk.timeout", account_id=acc.id)
+            return False
         except Exception as e:
             await log.aerror("bulk.error", account_id=acc.id, error=str(e))
             return False
@@ -122,9 +127,11 @@ async def bulk_upload_profile_photo(owner_id: int, file_path: str, progress_call
     with open(file_path, "rb") as f:
         file_bytes = f.read()
 
+    file_name = os.path.basename(file_path) if file_path else "photo.jpg"
+
     async def _action(client, acc):
         # upload_file accepts bytes directly!
-        file = await client.upload_file(file_bytes)
+        file = await client.upload_file(file_bytes, file_name=file_name)
         await client(UploadProfilePhotoRequest(file=file))
 
     return await _execute_bulk(owner_id, _action, progress_callback)

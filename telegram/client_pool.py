@@ -102,7 +102,7 @@ class ClientPool:
             try:
                 # Reconnect if disconnected
                 if not slot.client.is_connected():
-                    await slot.client.connect()
+                    await asyncio.wait_for(slot.client.connect(), timeout=15.0)
 
                 slot.is_borrowed = True
                 slot.last_used = time.monotonic()
@@ -203,8 +203,6 @@ class ClientPool:
             from services.autoreply_service import handle_incoming_message
             client.add_event_handler(handle_incoming_message, events.NewMessage(incoming=True))
             
-            await client.connect()
-
             slot = PoolSlot(account_id=account_id, client=client)
             self._slots[account_id] = slot
 
