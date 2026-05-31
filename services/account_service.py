@@ -110,6 +110,8 @@ async def delete_all_accounts(owner_id: int) -> int:
         
     await account_cache.invalidate_list(owner_id)
     await dashboard_cache.invalidate(owner_id)
+    from cache import health_cache
+    await health_cache.invalidate_summary(owner_id)
     
     await log.ainfo("account.deleted_all", owner_id=owner_id, count=count)
     return count
@@ -132,6 +134,8 @@ async def delete_limited_accounts(owner_id: int) -> int:
             
     await account_cache.invalidate_list(owner_id)
     await dashboard_cache.invalidate(owner_id)
+    from cache import health_cache
+    await health_cache.invalidate_summary(owner_id)
     
     await log.ainfo("account.deleted_limited", owner_id=owner_id, count=count)
     return count
@@ -190,3 +194,5 @@ async def _invalidate_caches(account_id: str, owner_id: int) -> None:
     await account_cache.invalidate_summary(account_id)
     await account_cache.invalidate_list(owner_id)
     await dashboard_cache.invalidate(owner_id)
+    from cache import health_cache
+    await health_cache.invalidate_summary(owner_id)
