@@ -56,7 +56,7 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
             async def _run_inner():
                 async with client_pool.acquire(str(acc.id)) as client:
                     await action_func(client, acc)
-            await asyncio.wait_for(_run_inner(), timeout=60.0)
+            await asyncio.wait_for(_run_inner(), timeout=300.0)
             return True
         except asyncio.TimeoutError:
             await log.aerror("bulk.timeout", account_id=acc.id)
