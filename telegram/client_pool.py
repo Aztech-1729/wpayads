@@ -73,14 +73,16 @@ class ClientPool:
             except asyncio.CancelledError:
                 pass
 
-        # Disconnect all clients
+        # Disconnect all clients concurrently
+        disconnect_tasks = []
         for slot in list(self._slots.values()):
-            try:
-                await slot.client.disconnect()
-                # Give Telethon's internal send/recv loops time to finalize
-                await asyncio.sleep(0.25)
-            except Exception:
-                pass
+            disconnect_tasks.append(slot.client.disconnect())
+            
+        if disconnect_tasks:
+            await asyncio.gather(*disconnect_tasks, return_exceptions=True)
+            # Give Telethon's internal send/recv loops time to finalize
+            await asyncio.sleep(0.25)
+            
         self._slots.clear()
         await log.ainfo("pool.stopped")
 
@@ -117,6 +119,15 @@ class ClientPool:
             except Exception as exc:
                 slot.error_count += 1
                 await self._update_circuit(account_id, success=False)
+                
+                # Force disconnect on fatal connection/session errors so it cleanly reconnects next time
+                err_str = str(exc).lower()
+                if "wrong session id" in err_str or "connection" in err_str or "closed" in err_str or "unpacking" in err_str:
+                    try:
+                        await slot.client.disconnect()
+                    except Exception:
+                        pass
+                        
                 raise
 
             finally:
