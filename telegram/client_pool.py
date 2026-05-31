@@ -93,6 +93,7 @@ class ClientPool:
             async with client_pool.acquire(account_id) as client:
                 await client.send_message(target, message)
         """
+        account_id = str(account_id)
         # Check circuit breaker
         await self._check_circuit(account_id)
 
@@ -129,6 +130,7 @@ class ClientPool:
 
     async def evict(self, account_id: str) -> None:
         """Force-disconnect and remove a client (on ban/quarantine)."""
+        account_id = str(account_id)
         async with self._global_lock:
             slot = self._slots.pop(account_id, None)
             if slot:
@@ -142,6 +144,7 @@ class ClientPool:
 
     async def register(self, account_id: str, session: StringSession) -> None:
         """Register a new session in the pool without connecting."""
+        account_id = str(account_id)
         settings = get_settings()
         client = TelegramClient(session, settings.api_id, settings.api_hash, connection_retries=3, request_retries=3, retry_delay=2)
         async with self._global_lock:
