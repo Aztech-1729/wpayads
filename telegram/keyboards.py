@@ -167,7 +167,7 @@ def bulk_manager_keyboard() -> list[list[Button]]:
             Button.inline(_b("📦 Archive Chats"), CB.BULK_ARCHIVE, style="primary"),
         ],
         [
-            Button.inline(_b("🚪 Leave Groups"), CB.BULK_LEAVE_GROUPS, style="danger"),
+            Button.inline(_b("🚪 Leave Groups/Channels"), CB.BULK_LEAVE_GROUPS, style="danger"),
             Button.inline(_b("🔐 2FA Manager"), CB.BULK_2FA, style="primary"),
         ],
         [Button.inline(_b("← Back"), CB.ACCOUNTS, style="danger")],

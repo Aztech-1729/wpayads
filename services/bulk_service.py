@@ -144,7 +144,7 @@ async def bulk_leave_groups(owner_id: int) -> tuple[int, int]:
         async for dialog in client.iter_dialogs():
             if dialog.is_group or dialog.is_channel:
                 try:
-                    await client(LeaveChannelRequest(channel=dialog.input_entity))
+                    await client.delete_dialog(dialog.entity)
                 except Exception:
                     pass
 
