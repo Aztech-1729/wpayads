@@ -117,3 +117,17 @@ async def duplicate(campaign_id: str, new_name: str) -> Optional[Campaign]:
     new_doc["created_at"] = now
     new_doc["updated_at"] = now
     return await create(new_doc)
+
+
+async def remove_account_from_campaigns(account_id: str, group_ids: list[str]) -> bool:
+    """Remove an account and its specific groups from all campaigns."""
+    result = await _coll().update_many(
+        {},
+        {
+            "$pull": {
+                "account_ids": account_id,
+                "group_ids": {"$in": group_ids}
+            }
+        }
+    )
+    return result.modified_count > 0

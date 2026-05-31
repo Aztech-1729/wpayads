@@ -87,9 +87,16 @@ async def delete_account(account_id: str, owner_id: int) -> None:
 
     await accounts_repo.delete(account_id)
     # Also delete associated groups and health records
-    from repositories import account_groups_repo, health_repo
+    from repositories import account_groups_repo, health_repo, campaigns_repo
+    
+    # Get all group IDs for this account before deleting them
+    group_ids = await account_groups_repo.get_all_group_ids(account_id)
+    
     await account_groups_repo.delete_by_account(account_id)
     await health_repo.delete_by_account(account_id)
+    
+    # Clean up campaigns
+    await campaigns_repo.remove_account_from_campaigns(account_id, group_ids)
     
     await _invalidate_caches(account_id, owner_id)
     await log.ainfo("account.deleted", account_id=account_id)
@@ -104,9 +111,18 @@ async def delete_all_accounts(owner_id: int) -> int:
     count = 0
     for acc in accounts:
         acc_id = str(acc.id)
+        
+        # Get groups before deleting
+        group_ids = await account_groups_repo.get_all_group_ids(acc_id)
+        
         await accounts_repo.delete(acc_id)
         await account_groups_repo.delete_by_account(acc_id)
         await account_cache.invalidate_summary(acc_id)
+        
+        # Clean up campaigns
+        from repositories import campaigns_repo
+        await campaigns_repo.remove_account_from_campaigns(acc_id, group_ids)
+        
         count += 1
         
     await health_repo.delete_by_owner(owner_id)
@@ -130,10 +146,16 @@ async def delete_limited_accounts(owner_id: int) -> int:
         # Limited status or low health score
         if acc.health_score < 50:
             acc_id = str(acc.id)
+            group_ids = await account_groups_repo.get_all_group_ids(acc_id)
+            
             await accounts_repo.delete(acc_id)
             await account_groups_repo.delete_by_account(acc_id)
             await health_repo.delete_by_account(acc_id)
             await account_cache.invalidate_summary(acc_id)
+            
+            from repositories import campaigns_repo
+            await campaigns_repo.remove_account_from_campaigns(acc_id, group_ids)
+            
             count += 1
             
     await account_cache.invalidate_list(owner_id)
@@ -159,9 +181,14 @@ async def handle_unauthorized_account(account_id: str) -> None:
         account_name = account.display_name
 
         # 1. Delete from DB
+        group_ids = await account_groups_repo.get_all_group_ids(account_id)
+        
         await accounts_repo.delete(account_id)
         await account_groups_repo.delete_by_account(account_id)
         await health_repo.delete_by_account(account_id)
+        
+        from repositories import campaigns_repo
+        await campaigns_repo.remove_account_from_campaigns(account_id, group_ids)
 
         # 2. Evict from Pool
         from telegram.client_pool import client_pool

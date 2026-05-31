@@ -227,8 +227,8 @@ async def _get_campaign_summary(campaign_id: str) -> dict:
             data = c.model_dump(mode="json")
             data["account_count"] = len(c.account_ids)
             data["group_count"] = len(c.group_ids)
-            data["success_count"] = c.stats.success_count if hasattr(c.stats, "success_count") else 0
-            data["failure_count"] = c.stats.failure_count if hasattr(c.stats, "failure_count") else 0
+            data["success_count"] = c.stats.total_success if hasattr(c.stats, "total_success") else 0
+            data["failure_count"] = c.stats.total_failed if hasattr(c.stats, "total_failed") else 0
             await campaign_cache.set_summary(campaign_id, data)
     return data or {}
 
