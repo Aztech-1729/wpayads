@@ -77,6 +77,8 @@ class ClientPool:
         for slot in list(self._slots.values()):
             try:
                 await slot.client.disconnect()
+                # Give Telethon's internal send/recv loops time to finalize
+                await asyncio.sleep(0.25)
             except Exception:
                 pass
         self._slots.clear()
@@ -132,6 +134,8 @@ class ClientPool:
             if slot:
                 try:
                     await slot.client.disconnect()
+                    # Give Telethon's internal send/recv loops time to finalize
+                    await asyncio.sleep(0.25)
                 except Exception:
                     pass
                 await log.ainfo("pool.evicted", account_id=account_id)
@@ -227,6 +231,7 @@ class ClientPool:
 
         try:
             await lru_slot.client.disconnect()
+            await asyncio.sleep(0.25)
         except Exception:
             pass
 

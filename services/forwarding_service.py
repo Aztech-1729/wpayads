@@ -12,6 +12,7 @@ import random
 from typing import Optional
 
 from telethon.errors import (
+    ChatAdminRequiredError,
     ChatWriteForbiddenError,
     FloodWaitError,
     UserBannedInChannelError,
@@ -19,6 +20,7 @@ from telethon.errors import (
     UserDeactivatedError,
     AuthKeyUnregisteredError,
 )
+from telethon.errors.common import TypeNotFoundError
 
 from core.config import get_settings
 from core.logging import get_logger
@@ -92,7 +94,16 @@ async def safe_forward(
                     reply_to=topic_id,
                 )
             else:
-                sent_msgs = await client.forward_messages(target, message)
+                try:
+                    sent_msgs = await client.forward_messages(target, message)
+                except ChatAdminRequiredError:
+                    # Group restricts forwarding — fall back to send_message
+                    await log.ainfo(
+                        "forward.fallback_to_send",
+                        account_id=account_id,
+                        group_id=group_id,
+                    )
+                    sent_msgs = await client.send_message(target, message)
 
             # Extract message link if possible
             msg_link = ""
@@ -170,7 +181,7 @@ async def safe_forward(
             )
             await asyncio.sleep(wait_time)
 
-        except (ChatWriteForbiddenError, UserBannedInChannelError) as e:
+        except (ChatWriteForbiddenError, UserBannedInChannelError, ChatAdminRequiredError) as e:
             # Permanent failures — don't retry
             await accounts_repo.increment_counters(account_id, failure=1)
             await analytics_repo.log_forward(
@@ -190,6 +201,21 @@ async def safe_forward(
             from services import account_service
             await account_service.handle_unauthorized_account(account_id)
             return False
+
+        except TypeNotFoundError as e:
+            # Telegram sent a TL object with a constructor ID not recognized
+            # by this Telethon version. Log and skip — don't crash or retry.
+            await log.awarning(
+                "forward.type_not_found",
+                account_id=account_id,
+                error=str(e),
+                attempt=attempt + 1,
+            )
+            # Wait briefly and retry — often the next attempt succeeds
+            if attempt < retries - 1:
+                await asyncio.sleep(2 + random.uniform(0, 1))
+            else:
+                return False
 
         except Exception as e:
             await accounts_repo.increment_counters(account_id, failure=1)
