@@ -51,8 +51,9 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
         except Exception:
             pass
 
-    async def _task(acc):
+    async def _task(acc, delay: float):
         try:
+            await asyncio.sleep(delay)
             async def _run_inner():
                 async with client_pool.acquire(str(acc.id)) as client:
                     await action_func(client, acc)
@@ -72,7 +73,7 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
             break
             
         chunk = accounts[i : i + chunk_size]
-        results = await asyncio.gather(*[_task(a) for a in chunk], return_exceptions=True)
+        results = await asyncio.gather(*[_task(a, idx * 0.5) for idx, a in enumerate(chunk)], return_exceptions=True)
         for res in results:
             if isinstance(res, bool) and res:
                 success += 1

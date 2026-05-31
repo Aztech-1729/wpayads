@@ -224,3 +224,18 @@ async def set_next_check(account_id: str, next_check_at: datetime) -> None:
         {"_id": ObjectId(account_id)},
         {"$set": {"next_check_at": next_check_at}},
     )
+
+
+async def get_by_phone(owner_id: int, phone: str) -> Optional[Account]:
+    """Get an account by exact phone number for a specific owner."""
+    doc = await _coll().find_one({
+        "$or": [
+            {"owner_id": int(owner_id)},
+            {"owner_id": str(owner_id)}
+        ],
+        "phone": phone
+    })
+    if doc is None:
+        return None
+    doc["_id"] = str(doc["_id"])
+    return Account.model_validate(doc)

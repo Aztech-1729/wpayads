@@ -81,13 +81,20 @@ async def import_session(owner_id: int, raw_string: str) -> Account:
             detail=str(exc),
         ) from exc
 
-    # 3. Encrypt and persist
+    # 3. Check for duplicates
+    phone = me.phone or "unknown"
+    if phone != "unknown":
+        existing = await accounts_repo.get_by_phone(owner_id, phone)
+        if existing:
+            raise SessionInvalidError(f"Account with phone +{phone} is already added!")
+
+    # 4. Encrypt and persist
     encrypted = encrypt_session(raw_string)
     account = await accounts_repo.create(
         owner_id=owner_id,
-        phone=me.phone or "unknown",
+        phone=phone,
         session=encrypted,
-        name=me.first_name or me.username or me.phone or "Unknown",
+        name=me.first_name or me.username or phone,
     )
 
     await log.ainfo(

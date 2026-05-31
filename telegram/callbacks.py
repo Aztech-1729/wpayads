@@ -991,6 +991,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         elif action == "bulk_rm_photo":
             from telegram.menus import render_bulk_progress
@@ -1008,6 +1009,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         elif action == "bulk_clean_dms":
             from telegram.menus import render_bulk_progress
@@ -1025,6 +1027,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         elif action == "bulk_archive":
             from telegram.menus import render_bulk_progress
@@ -1042,6 +1045,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         elif action == "bulk_leave_groups":
             from telegram.menus import render_bulk_progress
@@ -1059,6 +1063,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         elif action == "bulk_rm_2fa":
             from telegram.menus import render_bulk_progress
@@ -1076,6 +1081,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
                 except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
+            return
             
         else:
             text = "❓ Unknown action."
