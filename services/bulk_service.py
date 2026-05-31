@@ -109,7 +109,9 @@ async def bulk_update_profile(owner_id: int, first_name: str | None = None, last
 async def bulk_remove_usernames(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk remove usernames."""
     async def _action(client, acc):
-        await client(UpdateUsernameRequest(username=""))
+        me = await client.get_me()
+        if getattr(me, "username", None):
+            await client(UpdateUsernameRequest(username=""))
 
     return await _execute_bulk(owner_id, _action, progress_callback)
 
