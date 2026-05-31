@@ -663,27 +663,7 @@ async def on_health_view_all(event: events.CallbackQuery.Event, page: int = 1) -
     await event.edit(text, buttons=buttons, parse_mode="html")
 
 
-# ── Groups ──────────────────────────────────────────────────
-
-async def on_groups_menu(event: events.CallbackQuery.Event, page: int = 1) -> None:
-    """Display accounts list to select for groups management."""
-    await event.answer()
-    from cache import account_cache
-    data = await account_cache.get_page(event.sender_id, page)
-    if not data:
-        from workers.cache_worker import warm_user_cache
-        await warm_user_cache(event.sender_id)
-        data = await account_cache.get_page(event.sender_id, page)
-
-    accounts = data.get("accounts", []) if data else []
-    pagination = data.get("pagination", {}) if data else {}
-    text = (
-        "👥 <b>GROUPS MANAGEMENT</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Select an account to manage its groups or use <b>Auto Join</b> to join new ones."
-    )
-    buttons = keyboards.groups_management_keyboard(accounts, pagination)
-    await event.edit(text, buttons=buttons, parse_mode="html")
+# ── Auto Join ──────────────────────────────────────────────────
 
 
 async def on_groups_autojoin(event: events.CallbackQuery.Event) -> None:
@@ -695,7 +675,7 @@ async def on_groups_autojoin(event: events.CallbackQuery.Event) -> None:
         return
 
     text = menus.render_autojoin_prompt()
-    buttons = keyboards.back_keyboard(CB.GROUPS)
+    buttons = keyboards.back_keyboard(CB.DASHBOARD)
     await event.edit(text, buttons=buttons, parse_mode="html")
     await set_context(event.sender_id, "awaiting_input", "autojoin_file")
 
@@ -707,63 +687,8 @@ async def on_groups_autojoin_cancel(event: events.CallbackQuery.Event) -> None:
         await event.answer("🛑 Joining process cancelled!", alert=True)
     else:
         await event.answer("Nothing to cancel.")
-    await on_groups_menu(event)
-
-async def on_groups_view(event: events.CallbackQuery.Event, account_id: str, page: int = 1) -> None:
-    """Display paginated list of groups for an account."""
-    from repositories import account_groups_repo
-    from services.account_service import get_account
-    from telegram.client_pool import client_pool
-    
-    account = await get_account(account_id)
-    if not account:
-        await event.answer("Account not found.")
-        return
-
-    # Check if we have groups
-    total = await account_groups_repo._coll().count_documents({"account_id": account_id})
-    if total == 0:
-        await event.answer("Fetching groups... this may take a few seconds.")
-        try:
-            async with client_pool.acquire(account_id) as client:
-                dialogs = await client.get_dialogs()
-                groups = [
-                    {"id": d.id, "title": d.title, "is_selected": False}
-                    for d in dialogs if d.is_group or d.is_channel
-                ]
-                await account_groups_repo.save_groups(account_id, groups)
-        except Exception as exc:
-            await event.answer(f"Failed to fetch groups: {str(exc)}")
-            return
-            
-    await event.answer()
-    
-    groups, pagination = await account_groups_repo.get_groups_paginated(account_id, page=page)
-    selected_count = await account_groups_repo.count_selected(account_id)
-    total_count = await account_groups_repo._coll().count_documents({"account_id": account_id})
-    
-    text = menus.render_groups_list(account.phone, selected_count, total_count)
-    buttons = keyboards.groups_list_keyboard(account_id, groups, pagination)
-    
-    try:
-        await event.edit(text, buttons=buttons, parse_mode="html")
-    except Exception:
-        pass
-
-
-async def on_groups_toggle(event: events.CallbackQuery.Event, account_id: str, group_id: int, page: int) -> None:
-    """Toggle group selection."""
-    from repositories import account_groups_repo
-    await account_groups_repo.toggle_group(account_id, group_id)
-    await on_groups_view(event, account_id, page)
-
-
-async def on_groups_select_all(event: events.CallbackQuery.Event, account_id: str, page: int) -> None:
-    """Select all groups."""
-    from repositories import account_groups_repo
-    await account_groups_repo.select_all_groups(account_id)
-    await event.answer("✅ All groups selected!")
-    await on_groups_view(event, account_id, page)
+    from telegram.callbacks import on_dashboard
+    await on_dashboard(event)
 
 
 # ── Analytics ───────────────────────────────────────────────
@@ -1303,19 +1228,7 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
         screen = parts[2]
         page = int(parts[3])
         await on_page_prev(event, screen, page)
-    elif data.startswith("groups:view:"):
-        parts = data.split(":")
-        account_id = parts[2]
-        page = int(parts[3]) if len(parts) > 3 else 1
-        await on_groups_view(event, account_id, page)
-    elif data.startswith("groups:toggle:"):
-        _, _, account_id, group_id, page = data.split(":")
-        await on_groups_toggle(event, account_id, int(group_id), int(page))
-    elif data.startswith("groups:all:"):
-        _, _, account_id, page = data.split(":")
-        await on_groups_select_all(event, account_id, int(page))
-    elif data == CB.GROUPS:
-        await on_groups_menu(event)
+
     elif data.startswith("confirm:yes:"):
         parts = data.split(":")
         action = parts[2]
