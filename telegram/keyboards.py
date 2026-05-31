@@ -99,6 +99,9 @@ def account_list_keyboard(
     # Action row
     if show_actions:
         rows.append([
+            Button.inline(_b("👥 Bulk Account Manager"), CB.BULK_MANAGER, style="primary"),
+        ])
+        rows.append([
             Button.inline(_b("➕ Add Account"), CB.ACCOUNT_ADD, style="primary"),
             Button.inline(_b("📂 Upload Sessions"), CB.ACCOUNT_UPLOAD_SESSIONS, style="primary"),
         ])
@@ -141,6 +144,47 @@ def account_detail_keyboard(account_id: str, status: str, back_cb: str = CB.ACCO
     rows.append([Button.inline(_b("← Back"), back_cb, style="danger")])
 
     return rows
+
+
+# ── 3.5 BULK ACCOUNT MANAGER ───────────────────────────────
+
+def bulk_manager_keyboard() -> list[list[Button]]:
+    """Bulk actions for all accounts."""
+    return [
+        [
+            Button.inline(_b("📝 Change Name"), CB.BULK_NAME, style="primary"),
+            Button.inline(_b("📄 Change Bio"), CB.BULK_BIO, style="primary"),
+        ],
+        [
+            Button.inline(_b("👤 Change Username"), CB.BULK_USERNAME, style="primary"),
+        ],
+        [
+            Button.inline(_b("🖼 Change Photo"), CB.BULK_PHOTO, style="primary"),
+            Button.inline(_b("🗑 Remove Photo"), CB.BULK_REMOVE_PHOTO, style="danger"),
+        ],
+        [
+            Button.inline(_b("💬 Clean DMs"), CB.BULK_CLEAN_DMS, style="danger"),
+            Button.inline(_b("📦 Archive Chats"), CB.BULK_ARCHIVE, style="primary"),
+        ],
+        [
+            Button.inline(_b("🚪 Leave Groups"), CB.BULK_LEAVE_GROUPS, style="danger"),
+            Button.inline(_b("🔐 2FA Manager"), CB.BULK_2FA, style="primary"),
+        ],
+        [Button.inline(_b("← Back"), CB.ACCOUNTS, style="danger")],
+    ]
+
+
+def bulk_2fa_keyboard() -> list[list[Button]]:
+    """Bulk 2FA actions for all accounts."""
+    return [
+        [
+            Button.inline(_b("🔐 Set/Change 2FA"), CB.BULK_2FA_SET, style="primary"),
+        ],
+        [
+            Button.inline(_b("🔓 Remove 2FA"), CB.BULK_2FA_REMOVE, style="danger"),
+        ],
+        [Button.inline(_b("← Back"), CB.BULK_MANAGER, style="danger")],
+    ]
 
 
 # ── 4. CAMPAIGNS LIST ─────────────────────────────────────

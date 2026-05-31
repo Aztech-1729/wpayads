@@ -185,6 +185,20 @@ class CB:
     ACCOUNT_HEALTH = "acc:health:{account_id}"
     ACCOUNT_STATS = "acc:stats:{account_id}"
     ACCOUNT_NOTES = "acc:notes:{account_id}"
+    
+    # Bulk Account Manager
+    BULK_MANAGER = "bulk:manager"
+    BULK_NAME = "bulk:name"
+    BULK_BIO = "bulk:bio"
+    BULK_USERNAME = "bulk:username"
+    BULK_PHOTO = "bulk:photo"
+    BULK_REMOVE_PHOTO = "bulk:rm_photo"
+    BULK_CLEAN_DMS = "bulk:clean_dms"
+    BULK_ARCHIVE = "bulk:archive"
+    BULK_LEAVE_GROUPS = "bulk:leave_groups"
+    BULK_2FA = "bulk:2fa"
+    BULK_2FA_SET = "bulk:2fa:set"
+    BULK_2FA_REMOVE = "bulk:2fa:remove"
 
     # Campaigns
     CAMPAIGN_VIEW = "cmp:view:{campaign_id}"

@@ -969,6 +969,37 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             from services import campaign_service
             await campaign_service.resume_campaign(target_id, event.sender_id)
             text = "▶️ Campaign started."
+            
+        elif action == "bulk_rm_photo":
+            await event.edit("Processing... Please wait ⏳")
+            from services import bulk_service
+            success, failed = await bulk_service.bulk_delete_profile_photos(event.sender_id)
+            text = f"✅ Photos removed.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            
+        elif action == "bulk_clean_dms":
+            await event.edit("Processing... Please wait ⏳")
+            from services import bulk_service
+            success, failed = await bulk_service.bulk_clean_dms(event.sender_id)
+            text = f"✅ DMs cleaned.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            
+        elif action == "bulk_archive":
+            await event.edit("Processing... Please wait ⏳")
+            from services import bulk_service
+            success, failed = await bulk_service.bulk_archive_chats(event.sender_id)
+            text = f"✅ Chats archived.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            
+        elif action == "bulk_leave_groups":
+            await event.edit("Processing... Please wait ⏳")
+            from services import bulk_service
+            success, failed = await bulk_service.bulk_leave_groups(event.sender_id)
+            text = f"✅ Groups left.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            
+        elif action == "bulk_rm_2fa":
+            await event.edit("Processing... Please wait ⏳")
+            from services import bulk_service
+            success, failed = await bulk_service.bulk_remove_2fa(event.sender_id)
+            text = f"✅ 2FA removal attempted.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            
         else:
             text = "❓ Unknown action."
     except Exception as exc:
@@ -988,6 +1019,57 @@ async def on_noop(event: events.CallbackQuery.Event) -> None:
     """Handle no-op buttons (like page indicator)."""
     await event.answer()  # LINE 1. Non-negotiable.
     # Do nothing — just dismiss the loading spinner
+
+
+# ── Bulk Account Manager ──────────────────────────────────────
+
+async def on_bulk_manager(event: events.CallbackQuery.Event) -> None:
+    """Show Bulk Account Manager."""
+    await event.answer()
+    text = (
+        "👥 <b>Bulk Account Manager</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Perform actions on <b>all connected accounts</b> simultaneously.\n"
+        "<i>Note: Actions may take time if you have many accounts.</i>"
+    )
+    await event.edit(text, buttons=keyboards.bulk_manager_keyboard(), parse_mode="html")
+
+async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None:
+    """Handle bulk manager buttons."""
+    await event.answer()
+    if action == "name":
+        await set_context(event.sender_id, "awaiting_input", "bulk_name")
+        await event.edit("Please send the <b>new First Name</b> for all accounts.\n\n<i>Tip: Type {rand} to inject a random 4-digit number.</i>", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "bio":
+        await set_context(event.sender_id, "awaiting_input", "bulk_bio")
+        await event.edit("Please send the <b>new Bio/About</b> for all accounts.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "username":
+        await set_context(event.sender_id, "awaiting_input", "bulk_username")
+        await event.edit("Please send the <b>base username</b>.\n\nThe bot will automatically append a random 4-digit number to make them unique.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "photo":
+        await set_context(event.sender_id, "awaiting_input", "bulk_photo")
+        await event.edit("Please send the <b>new Profile Photo</b>.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "rm_photo":
+        buttons = keyboards.confirm_keyboard("bulk_rm_photo", "all")
+        await event.edit("🗑️ Remove all profile photos from all accounts?", buttons=buttons, parse_mode="html")
+    elif action == "clean_dms":
+        buttons = keyboards.confirm_keyboard("bulk_clean_dms", "all")
+        await event.edit("💬 Delete all private chat history from all accounts?", buttons=buttons, parse_mode="html")
+    elif action == "archive":
+        buttons = keyboards.confirm_keyboard("bulk_archive", "all")
+        await event.edit("📦 Archive all active chats on all accounts?", buttons=buttons, parse_mode="html")
+    elif action == "leave_groups":
+        buttons = keyboards.confirm_keyboard("bulk_leave_groups", "all")
+        await event.edit("🚪 Leave ALL groups and channels on all accounts?", buttons=buttons, parse_mode="html")
+    elif action == "2fa":
+        text = "🔐 <b>Bulk 2FA Manager</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\n\nChoose an action below."
+        await event.edit(text, buttons=keyboards.bulk_2fa_keyboard(), parse_mode="html")
+    elif action == "2fa:set":
+        await set_context(event.sender_id, "awaiting_input", "bulk_2fa_set")
+        await event.edit("Please send the <b>new 2FA Password</b> for all accounts.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "2fa:remove":
+        buttons = keyboards.confirm_keyboard("bulk_rm_2fa", "all")
+        await event.edit("🔓 Remove 2FA from all accounts?\n\n<i>Note: This only works if no 2FA is set, or if we can clear it.</i>", buttons=buttons, parse_mode="html")
 
 
 # ── Callback Router ─────────────────────────────────────────
@@ -1138,6 +1220,12 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
         action = parts[2]
         target_id = parts[3]
         await on_confirm_yes(event, action, target_id)
+    elif data == CB.BULK_MANAGER:
+        await on_bulk_manager(event)
+    elif data.startswith("bulk:"):
+        # e.g. bulk:name, bulk:2fa:set
+        action = data[5:]
+        await on_bulk_action(event, action)
     else:
         # Unknown callback — just answer to dismiss spinner
         await event.answer("Unknown action", alert=False)

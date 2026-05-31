@@ -38,7 +38,7 @@ async def init_bot() -> TelegramClient:
     settings = get_settings()
 
     _bot = TelegramClient(
-        "wpay_bot",
+        "aztech_bot",
         settings.api_id,
         settings.api_hash,
     )
@@ -276,6 +276,16 @@ def _register_handlers(bot: TelegramClient) -> None:
                 await _handle_cmp_int_round(event, awaiting.split(":")[1])
             elif awaiting.startswith("cmp_rounds_max:"):
                 await _handle_cmp_rounds_max(event, awaiting.split(":")[1])
+            elif awaiting == "bulk_name":
+                await _handle_bulk_name(event)
+            elif awaiting == "bulk_bio":
+                await _handle_bulk_bio(event)
+            elif awaiting == "bulk_username":
+                await _handle_bulk_username(event)
+            elif awaiting == "bulk_photo":
+                await _handle_bulk_photo(event)
+            elif awaiting == "bulk_2fa_set":
+                await _handle_bulk_2fa_set(event)
         except Exception as exc:
             await event.respond(f"❌ Error: {str(exc)}", parse_mode="html")
             await set_context(user_id, "awaiting_input", None)
@@ -606,3 +616,61 @@ async def _handle_cmp_rounds_max(event, campaign_id: str):
         await event.respond(text, buttons=buttons, parse_mode="html")
     except ValueError:
         await event.respond("❌ Invalid number. Try again.")
+
+
+async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
+    text = event.text.strip()
+    msg = await event.respond("Processing... Please wait ⏳")
+    from services import bulk_service
+    
+    if "{rand}" in text:
+        import random, string
+        text = text.replace("{rand}", "".join(random.choices(string.digits, k=4)))
+        
+    success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text)
+    await set_context(event.sender_id, "awaiting_input", None)
+    await msg.edit(f"✅ Name updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+
+async def _handle_bulk_bio(event: events.NewMessage.Event) -> None:
+    text = event.text.strip()
+    msg = await event.respond("Processing... Please wait ⏳")
+    from services import bulk_service
+    success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text)
+    await set_context(event.sender_id, "awaiting_input", None)
+    await msg.edit(f"✅ Bio updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+
+async def _handle_bulk_username(event: events.NewMessage.Event) -> None:
+    text = event.text.strip()
+    msg = await event.respond("Processing... Please wait ⏳")
+    from services import bulk_service
+    success, failed = await bulk_service.bulk_update_username(event.sender_id, text)
+    await set_context(event.sender_id, "awaiting_input", None)
+    await msg.edit(f"✅ Username updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+
+async def _handle_bulk_photo(event: events.NewMessage.Event) -> None:
+    if not event.photo:
+        await event.respond("❌ Please send a photo.")
+        return
+        
+    msg = await event.respond("Downloading photo... ⏳")
+    import os, uuid
+    filename = f"temp_photo_{uuid.uuid4().hex}.jpg"
+    await event.download_media(file=filename)
+    
+    await msg.edit("Processing... Please wait ⏳")
+    from services import bulk_service
+    success, failed = await bulk_service.bulk_upload_profile_photo(event.sender_id, filename)
+    await set_context(event.sender_id, "awaiting_input", None)
+    
+    if os.path.exists(filename):
+        os.remove(filename)
+        
+    await msg.edit(f"✅ Photo updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+
+async def _handle_bulk_2fa_set(event: events.NewMessage.Event) -> None:
+    text = event.text.strip()
+    msg = await event.respond("Processing... Please wait ⏳")
+    from services import bulk_service
+    success, failed = await bulk_service.bulk_manage_2fa(event.sender_id, text)
+    await set_context(event.sender_id, "awaiting_input", None)
+    await msg.edit(f"✅ 2FA set attempted.\n\n✅ Success: {success}\n❌ Failed: {failed}")
