@@ -971,34 +971,49 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             text = "▶️ Campaign started."
             
         elif action == "bulk_rm_photo":
-            await event.edit("Processing... Please wait ⏳")
+            await event.edit("✅ <b>Photo removal started in the background!</b> You will be notified when it completes.", parse_mode="html")
             from services import bulk_service
-            success, failed = await bulk_service.bulk_delete_profile_photos(event.sender_id)
-            text = f"✅ Photos removed.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            async def run_task():
+                success, failed = await bulk_service.bulk_delete_profile_photos(event.sender_id)
+                await event.respond(f"✅ <b>Bulk Photo Removal Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+            import asyncio
+            asyncio.create_task(run_task())
             
         elif action == "bulk_clean_dms":
-            await event.edit("Processing... Please wait ⏳")
+            await event.edit("✅ <b>DM cleanup started in the background!</b> You will be notified when it completes.", parse_mode="html")
             from services import bulk_service
-            success, failed = await bulk_service.bulk_clean_dms(event.sender_id)
-            text = f"✅ DMs cleaned.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            async def run_task():
+                success, failed = await bulk_service.bulk_clean_dms(event.sender_id)
+                await event.respond(f"✅ <b>Bulk DM Cleanup Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+            import asyncio
+            asyncio.create_task(run_task())
             
         elif action == "bulk_archive":
-            await event.edit("Processing... Please wait ⏳")
+            await event.edit("✅ <b>Archive started in the background!</b> You will be notified when it completes.", parse_mode="html")
             from services import bulk_service
-            success, failed = await bulk_service.bulk_archive_chats(event.sender_id)
-            text = f"✅ Chats archived.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            async def run_task():
+                success, failed = await bulk_service.bulk_archive_chats(event.sender_id)
+                await event.respond(f"✅ <b>Bulk Archive Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+            import asyncio
+            asyncio.create_task(run_task())
             
         elif action == "bulk_leave_groups":
-            await event.edit("Processing... Please wait ⏳")
+            await event.edit("✅ <b>Leaving groups/channels started in the background!</b> You will be notified when it completes.", parse_mode="html")
             from services import bulk_service
-            success, failed = await bulk_service.bulk_leave_groups(event.sender_id)
-            text = f"✅ Groups left.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            async def run_task():
+                success, failed = await bulk_service.bulk_leave_groups(event.sender_id)
+                await event.respond(f"✅ <b>Bulk Leave Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+            import asyncio
+            asyncio.create_task(run_task())
             
         elif action == "bulk_rm_2fa":
-            await event.edit("Processing... Please wait ⏳")
+            await event.edit("✅ <b>2FA removal started in the background!</b> You will be notified when it completes.", parse_mode="html")
             from services import bulk_service
-            success, failed = await bulk_service.bulk_remove_2fa(event.sender_id)
-            text = f"✅ 2FA removal attempted.\n\n✅ Success: {success}\n❌ Failed: {failed}"
+            async def run_task():
+                success, failed = await bulk_service.bulk_remove_2fa(event.sender_id)
+                await event.respond(f"✅ <b>Bulk 2FA Removal Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+            import asyncio
+            asyncio.create_task(run_task())
             
         else:
             text = "❓ Unknown action."

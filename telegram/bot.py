@@ -627,25 +627,42 @@ async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
         import random, string
         text = text.replace("{rand}", "".join(random.choices(string.digits, k=4)))
         
-    success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text)
+    async def run_task():
+        success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text)
+        await event.respond(f"✅ <b>Bulk Name Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+
+    import asyncio
+    asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit(f"✅ Name updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+    await msg.edit("✅ <b>Name update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_bio(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
     msg = await event.respond("Processing... Please wait ⏳")
     from services import bulk_service
-    success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text)
+    
+    async def run_task():
+        success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text)
+        await event.respond(f"✅ <b>Bulk Bio Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+
+    import asyncio
+    asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit(f"✅ Bio updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+    await msg.edit("✅ <b>Bio update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_username(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
     msg = await event.respond("Processing... Please wait ⏳")
     from services import bulk_service
-    success, failed = await bulk_service.bulk_update_username(event.sender_id, text)
+    
+    async def run_task():
+        success, failed = await bulk_service.bulk_update_username(event.sender_id, text)
+        await event.respond(f"✅ <b>Bulk Username Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+
+    import asyncio
+    asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit(f"✅ Username updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+    await msg.edit("✅ <b>Username update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_photo(event: events.NewMessage.Event) -> None:
     if not event.photo:
@@ -659,18 +676,28 @@ async def _handle_bulk_photo(event: events.NewMessage.Event) -> None:
     
     await msg.edit("Processing... Please wait ⏳")
     from services import bulk_service
-    success, failed = await bulk_service.bulk_upload_profile_photo(event.sender_id, filename)
-    await set_context(event.sender_id, "awaiting_input", None)
     
-    if os.path.exists(filename):
-        os.remove(filename)
-        
-    await msg.edit(f"✅ Photo updated.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+    async def run_task():
+        success, failed = await bulk_service.bulk_upload_profile_photo(event.sender_id, filename)
+        if os.path.exists(filename):
+            os.remove(filename)
+        await event.respond(f"✅ <b>Bulk Photo Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+
+    import asyncio
+    asyncio.create_task(run_task())
+    await set_context(event.sender_id, "awaiting_input", None)
+    await msg.edit("✅ <b>Photo update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_2fa_set(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
     msg = await event.respond("Processing... Please wait ⏳")
     from services import bulk_service
-    success, failed = await bulk_service.bulk_manage_2fa(event.sender_id, text)
+    
+    async def run_task():
+        success, failed = await bulk_service.bulk_manage_2fa(event.sender_id, text)
+        await event.respond(f"✅ <b>Bulk 2FA Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+
+    import asyncio
+    asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit(f"✅ 2FA set attempted.\n\n✅ Success: {success}\n❌ Failed: {failed}")
+    await msg.edit("✅ <b>2FA update started in the background!</b> You will be notified when it completes.", parse_mode="html")
