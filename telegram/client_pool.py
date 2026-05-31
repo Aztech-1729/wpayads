@@ -143,7 +143,7 @@ class ClientPool:
     async def register(self, account_id: str, session: StringSession) -> None:
         """Register a new session in the pool without connecting."""
         settings = get_settings()
-        client = TelegramClient(session, settings.api_id, settings.api_hash)
+        client = TelegramClient(session, settings.api_id, settings.api_hash, connection_retries=3, request_retries=3, retry_delay=2)
         async with self._global_lock:
             self._slots[account_id] = PoolSlot(
                 account_id=account_id,
@@ -195,7 +195,7 @@ class ClientPool:
             from services.session_manager import get_session_string
             raw_session = await get_session_string(account_id)
             session = StringSession(raw_session)
-            client = TelegramClient(session, settings.api_id, settings.api_hash)
+            client = TelegramClient(session, settings.api_id, settings.api_hash, connection_retries=3, request_retries=3, retry_delay=2)
             
             # Attach account ID and Auto Reply handler
             client.account_id = account_id
