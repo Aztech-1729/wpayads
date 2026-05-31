@@ -93,3 +93,15 @@ async def cleanup_old_records(days: int = 90) -> int:
     cutoff = cutoff - timedelta(days=days)
     result = await _coll().delete_many({"checked_at": {"$lt": cutoff}})
     return result.deleted_count
+
+
+async def delete_by_account(account_id: str) -> int:
+    """Delete all health records for an account."""
+    result = await _coll().delete_many({"account_id": account_id})
+    return result.deleted_count
+
+
+async def delete_by_owner(owner_id: int) -> int:
+    """Delete all health records for a user."""
+    result = await _coll().delete_many({"owner_id": owner_id})
+    return result.deleted_count

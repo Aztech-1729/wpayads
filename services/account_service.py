@@ -86,9 +86,10 @@ async def delete_account(account_id: str, owner_id: int) -> None:
         raise AccountNotFoundError("Not authorized")
 
     await accounts_repo.delete(account_id)
-    # Also delete associated groups
-    from repositories import account_groups_repo
+    # Also delete associated groups and health records
+    from repositories import account_groups_repo, health_repo
     await account_groups_repo.delete_by_account(account_id)
+    await health_repo.delete_by_account(account_id)
     
     await _invalidate_caches(account_id, owner_id)
     await log.ainfo("account.deleted", account_id=account_id)
@@ -96,7 +97,7 @@ async def delete_account(account_id: str, owner_id: int) -> None:
 
 async def delete_all_accounts(owner_id: int) -> int:
     """Delete all accounts for a specific user."""
-    from repositories import accounts_repo, account_groups_repo
+    from repositories import accounts_repo, account_groups_repo, health_repo
     
     # Get all accounts first
     accounts = await accounts_repo.list_by_owner(owner_id)
@@ -107,6 +108,8 @@ async def delete_all_accounts(owner_id: int) -> int:
         await account_groups_repo.delete_by_account(acc_id)
         await account_cache.invalidate_summary(acc_id)
         count += 1
+        
+    await health_repo.delete_by_owner(owner_id)
         
     await account_cache.invalidate_list(owner_id)
     await dashboard_cache.invalidate(owner_id)
@@ -119,7 +122,7 @@ async def delete_all_accounts(owner_id: int) -> int:
 
 async def delete_limited_accounts(owner_id: int) -> int:
     """Delete all accounts with health score below 50."""
-    from repositories import accounts_repo, account_groups_repo
+    from repositories import accounts_repo, account_groups_repo, health_repo
     
     accounts = await accounts_repo.list_by_owner(owner_id)
     count = 0
@@ -129,6 +132,7 @@ async def delete_limited_accounts(owner_id: int) -> int:
             acc_id = str(acc.id)
             await accounts_repo.delete(acc_id)
             await account_groups_repo.delete_by_account(acc_id)
+            await health_repo.delete_by_account(acc_id)
             await account_cache.invalidate_summary(acc_id)
             count += 1
             
@@ -144,7 +148,7 @@ async def delete_limited_accounts(owner_id: int) -> int:
 async def handle_unauthorized_account(account_id: str) -> None:
     """Permanently remove an account that is no longer authorized and notify owner."""
     try:
-        from repositories import accounts_repo, account_groups_repo
+        from repositories import accounts_repo, account_groups_repo, health_repo
         from services import notification_service
         
         account = await accounts_repo.get(account_id)
@@ -157,6 +161,7 @@ async def handle_unauthorized_account(account_id: str) -> None:
         # 1. Delete from DB
         await accounts_repo.delete(account_id)
         await account_groups_repo.delete_by_account(account_id)
+        await health_repo.delete_by_account(account_id)
 
         # 2. Evict from Pool
         from telegram.client_pool import client_pool
