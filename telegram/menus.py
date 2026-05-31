@@ -426,6 +426,36 @@ def render_health_settings() -> str:
     )
 
 
+def render_session_import_progress(
+    filename: str, total_count: int, success: int, failed: int
+) -> str:
+    """Renders live progress of a session import."""
+    text = (
+        f"📦 <b>Session Import:</b> <code>{filename}</code>\n"
+        f"├ <b>Total Detected:</b> {total_count}\n"
+        f"├ <b>Success:</b> {success} ✅\n"
+        f"└ <b>Failed:</b> {failed} ❌\n\n"
+        f"<i>Please wait, importing accounts... ⏳</i>"
+    )
+    return text
+
+
+def render_bulk_progress(
+    action_name: str, success: int, failed: int, total: int, status: str = "Processing... ⏳"
+) -> str:
+    """Renders live progress of a bulk account action."""
+    processed = success + failed
+    text = (
+        f"👥 <b>Bulk Action:</b> <i>{action_name}</i>\n"
+        f"├ <b>Total Accounts:</b> {total}\n"
+        f"├ <b>Processed:</b> {processed} / {total}\n"
+        f"├ <b>Success:</b> {success} ✅\n"
+        f"└ <b>Failed:</b> {failed} ❌\n\n"
+        f"<i>{status}</i>"
+    )
+    return text
+
+
 def render_groups_list(phone: str, selected_count: int, total_count: int) -> str:
     """Render the groups list for a specific account."""
     return (

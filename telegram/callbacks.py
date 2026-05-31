@@ -970,48 +970,93 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             await campaign_service.resume_campaign(target_id, event.sender_id)
             text = "▶️ Campaign started."
             
+        elif action == "bulk_cancel":
+            from services.bulk_service import cancel_bulk_task
+            cancel_bulk_task(event.sender_id)
+            await event.answer("🛑 Cancelling bulk task...", alert=True)
+
         elif action == "bulk_rm_photo":
-            await event.edit("✅ <b>Photo removal started in the background!</b> You will be notified when it completes.", parse_mode="html")
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Remove Photo", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
-                success, failed = await bulk_service.bulk_delete_profile_photos(event.sender_id)
-                await event.respond(f"✅ <b>Bulk Photo Removal Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Remove Photo", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_delete_profile_photos(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Remove Photo", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
             
         elif action == "bulk_clean_dms":
-            await event.edit("✅ <b>DM cleanup started in the background!</b> You will be notified when it completes.", parse_mode="html")
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Clean DMs", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
-                success, failed = await bulk_service.bulk_clean_dms(event.sender_id)
-                await event.respond(f"✅ <b>Bulk DM Cleanup Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Clean DMs", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_clean_dms(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Clean DMs", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
             
         elif action == "bulk_archive":
-            await event.edit("✅ <b>Archive started in the background!</b> You will be notified when it completes.", parse_mode="html")
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Archive Chats", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
-                success, failed = await bulk_service.bulk_archive_chats(event.sender_id)
-                await event.respond(f"✅ <b>Bulk Archive Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Archive Chats", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_archive_chats(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Archive Chats", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
             
         elif action == "bulk_leave_groups":
-            await event.edit("✅ <b>Leaving groups/channels started in the background!</b> You will be notified when it completes.", parse_mode="html")
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Leave Groups", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
-                success, failed = await bulk_service.bulk_leave_groups(event.sender_id)
-                await event.respond(f"✅ <b>Bulk Leave Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Leave Groups", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_leave_groups(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Leave Groups", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
             
         elif action == "bulk_rm_2fa":
-            await event.edit("✅ <b>2FA removal started in the background!</b> You will be notified when it completes.", parse_mode="html")
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Remove 2FA", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
             from services import bulk_service
             async def run_task():
-                success, failed = await bulk_service.bulk_remove_2fa(event.sender_id)
-                await event.respond(f"✅ <b>Bulk 2FA Removal Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Remove 2FA", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_remove_2fa(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Remove 2FA", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
             import asyncio
             asyncio.create_task(run_task())
             

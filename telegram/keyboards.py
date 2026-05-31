@@ -186,6 +186,12 @@ def bulk_2fa_keyboard() -> list[list[Button]]:
         [Button.inline(_b("← Back"), CB.BULK_MANAGER, style="danger")],
     ]
 
+def bulk_progress_keyboard() -> list[list[Button]]:
+    """Keyboard shown during active bulk operations."""
+    return [
+        [Button.inline(_b("❌ Cancel"), CB.BULK_CANCEL, style="danger")]
+    ]
+
 
 # ── 4. CAMPAIGNS LIST ─────────────────────────────────────
 

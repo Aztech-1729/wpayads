@@ -21,8 +21,15 @@ from telegram.client_pool import client_pool
 
 log = get_logger("bulk_service")
 
+# Dictionary to track cancellation flags for each owner.
+# If _active_bulk_tasks[owner_id] is False, the bulk task should abort.
+_active_bulk_tasks: dict[int, bool] = {}
 
-async def _execute_bulk(owner_id: int, action_func) -> tuple[int, int]:
+def cancel_bulk_task(owner_id: int):
+    """Signals any active bulk task for this owner to cancel."""
+    _active_bulk_tasks[owner_id] = False
+
+async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> tuple[int, int]:
     """
     Helper to execute an action across all accounts owned by the user.
     Returns (success_count, fail_count).
@@ -33,6 +40,10 @@ async def _execute_bulk(owner_id: int, action_func) -> tuple[int, int]:
 
     success = 0
     failed = 0
+    total = len(accounts)
+    
+    # Mark task as active
+    _active_bulk_tasks[owner_id] = True
 
     async def _task(acc):
         try:
@@ -43,11 +54,12 @@ async def _execute_bulk(owner_id: int, action_func) -> tuple[int, int]:
             await log.aerror("bulk.error", account_id=acc.id, error=str(e))
             return False
 
-    # Process sequentially to avoid aggressive flooding if many accounts
-    # are on the same proxy/IP, but with small concurrency for speed.
-    # Telethon handles parallel well, but let's do chunks of 5.
     chunk_size = 5
-    for i in range(0, len(accounts), chunk_size):
+    for i in range(0, total, chunk_size):
+        # Check cancellation
+        if not _active_bulk_tasks.get(owner_id, True):
+            break
+            
         chunk = accounts[i : i + chunk_size]
         results = await asyncio.gather(*[_task(a) for a in chunk], return_exceptions=True)
         for res in results:
@@ -55,12 +67,20 @@ async def _execute_bulk(owner_id: int, action_func) -> tuple[int, int]:
                 success += 1
             else:
                 failed += 1
+                
+        if progress_callback:
+            try:
+                await progress_callback(success, failed, total)
+            except Exception:
+                pass # Ignore UI edit errors
+                
         await asyncio.sleep(1) # Small delay between chunks
 
+    _active_bulk_tasks.pop(owner_id, None)
     return success, failed
 
 
-async def bulk_update_profile(owner_id: int, first_name: str | None = None, last_name: str | None = None, about: str | None = None) -> tuple[int, int]:
+async def bulk_update_profile(owner_id: int, first_name: str | None = None, last_name: str | None = None, about: str | None = None, progress_callback=None) -> tuple[int, int]:
     """Bulk update name or bio."""
     async def _action(client, acc):
         kwargs = {}
@@ -72,10 +92,10 @@ async def bulk_update_profile(owner_id: int, first_name: str | None = None, last
             kwargs["about"] = about
         await client(UpdateProfileRequest(**kwargs))
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_update_username(owner_id: int, username: str) -> tuple[int, int]:
+async def bulk_update_username(owner_id: int, username: str, progress_callback=None) -> tuple[int, int]:
     """Bulk update username (Note: Usernames must be unique, so we append a random number or counter)."""
     async def _action(client, acc):
         import random
@@ -84,19 +104,19 @@ async def bulk_update_username(owner_id: int, username: str) -> tuple[int, int]:
         unique_username = f"{username}{suffix}"
         await client(UpdateUsernameRequest(username=unique_username))
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_upload_profile_photo(owner_id: int, file_path: str) -> tuple[int, int]:
+async def bulk_upload_profile_photo(owner_id: int, file_path: str, progress_callback=None) -> tuple[int, int]:
     """Bulk upload a profile photo."""
     async def _action(client, acc):
         file = await client.upload_file(file_path)
         await client(UploadProfilePhotoRequest(file=file))
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_delete_profile_photos(owner_id: int) -> tuple[int, int]:
+async def bulk_delete_profile_photos(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk remove current profile photos."""
     async def _action(client, acc):
         # Fetch current photos
@@ -104,10 +124,10 @@ async def bulk_delete_profile_photos(owner_id: int) -> tuple[int, int]:
         if photos:
             await client(DeletePhotosRequest(id=photos))
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_clean_dms(owner_id: int) -> tuple[int, int]:
+async def bulk_clean_dms(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk delete all private chat history."""
     async def _action(client, acc):
         async for dialog in client.iter_dialogs():
@@ -117,10 +137,10 @@ async def bulk_clean_dms(owner_id: int) -> tuple[int, int]:
                 except Exception:
                     pass # Ignore errors for individual chats
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_archive_chats(owner_id: int) -> tuple[int, int]:
+async def bulk_archive_chats(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk move all private and group chats to archive."""
     async def _action(client, acc):
         peers = []
@@ -135,10 +155,10 @@ async def bulk_archive_chats(owner_id: int) -> tuple[int, int]:
         if peers:
             await client(EditPeerFoldersRequest(folder_peers=peers))
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_leave_groups(owner_id: int) -> tuple[int, int]:
+async def bulk_leave_groups(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk leave all joined groups/channels."""
     async def _action(client, acc):
         async for dialog in client.iter_dialogs():
@@ -148,18 +168,18 @@ async def bulk_leave_groups(owner_id: int) -> tuple[int, int]:
                 except Exception:
                     pass
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_manage_2fa(owner_id: int, new_password: str) -> tuple[int, int]:
+async def bulk_manage_2fa(owner_id: int, new_password: str, progress_callback=None) -> tuple[int, int]:
     """Bulk set or change 2FA password."""
     async def _action(client, acc):
         await client.edit_2fa(new_password=new_password)
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_remove_2fa(owner_id: int) -> tuple[int, int]:
+async def bulk_remove_2fa(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk remove 2FA password."""
     # We can't automatically remove 2FA without the old password using telethon's edit_2fa easily if we don't know it.
     # But if the user provides the current one, we could. For simplicity, we assume they want to clear it and we don't know it,
@@ -169,4 +189,4 @@ async def bulk_remove_2fa(owner_id: int) -> tuple[int, int]:
     async def _action(client, acc):
         await client.edit_2fa(new_password=None)
 
-    return await _execute_bulk(owner_id, _action)
+    return await _execute_bulk(owner_id, _action, progress_callback)

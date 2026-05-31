@@ -199,6 +199,7 @@ class CB:
     BULK_2FA = "bulk:2fa"
     BULK_2FA_SET = "bulk:2fa:set"
     BULK_2FA_REMOVE = "bulk:2fa:remove"
+    BULK_CANCEL = "bulk:cancel"
 
     # Campaigns
     CAMPAIGN_VIEW = "cmp:view:{campaign_id}"

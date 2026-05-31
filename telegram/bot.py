@@ -620,7 +620,9 @@ async def _handle_cmp_rounds_max(event, campaign_id: str):
 
 async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
-    msg = await event.respond("Processing... Please wait ⏳")
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    msg = await event.respond(render_bulk_progress("Change Name", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
     from services import bulk_service
     
     if "{rand}" in text:
@@ -628,41 +630,60 @@ async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
         text = text.replace("{rand}", "".join(random.choices(string.digits, k=4)))
         
     async def run_task():
-        success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text)
-        await event.respond(f"✅ <b>Bulk Name Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+        async def update_progress(success, failed, total):
+            try:
+                await msg.edit(render_bulk_progress("Change Name", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+            except Exception: pass
+        success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text, progress_callback=update_progress)
+        try:
+            await msg.edit(render_bulk_progress("Change Name", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+        except Exception: pass
 
     import asyncio
     asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit("✅ <b>Name update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_bio(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
-    msg = await event.respond("Processing... Please wait ⏳")
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    msg = await event.respond(render_bulk_progress("Change Bio", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
     from services import bulk_service
     
     async def run_task():
-        success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text)
-        await event.respond(f"✅ <b>Bulk Bio Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+        async def update_progress(success, failed, total):
+            try:
+                await msg.edit(render_bulk_progress("Change Bio", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+            except Exception: pass
+        success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text, progress_callback=update_progress)
+        try:
+            await msg.edit(render_bulk_progress("Change Bio", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+        except Exception: pass
 
     import asyncio
     asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit("✅ <b>Bio update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_username(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
-    msg = await event.respond("Processing... Please wait ⏳")
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    msg = await event.respond(render_bulk_progress("Change Username", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
     from services import bulk_service
     
     async def run_task():
-        success, failed = await bulk_service.bulk_update_username(event.sender_id, text)
-        await event.respond(f"✅ <b>Bulk Username Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+        async def update_progress(success, failed, total):
+            try:
+                await msg.edit(render_bulk_progress("Change Username", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+            except Exception: pass
+        success, failed = await bulk_service.bulk_update_username(event.sender_id, text, progress_callback=update_progress)
+        try:
+            await msg.edit(render_bulk_progress("Change Username", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+        except Exception: pass
 
     import asyncio
     asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit("✅ <b>Username update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_photo(event: events.NewMessage.Event) -> None:
     if not event.photo:
@@ -674,30 +695,44 @@ async def _handle_bulk_photo(event: events.NewMessage.Event) -> None:
     filename = f"temp_photo_{uuid.uuid4().hex}.jpg"
     await event.download_media(file=filename)
     
-    await msg.edit("Processing... Please wait ⏳")
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    await msg.edit(render_bulk_progress("Change Photo", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
     from services import bulk_service
     
     async def run_task():
-        success, failed = await bulk_service.bulk_upload_profile_photo(event.sender_id, filename)
+        async def update_progress(success, failed, total):
+            try:
+                await msg.edit(render_bulk_progress("Change Photo", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+            except Exception: pass
+        success, failed = await bulk_service.bulk_upload_profile_photo(event.sender_id, filename, progress_callback=update_progress)
         if os.path.exists(filename):
             os.remove(filename)
-        await event.respond(f"✅ <b>Bulk Photo Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+        try:
+            await msg.edit(render_bulk_progress("Change Photo", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+        except Exception: pass
 
     import asyncio
     asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit("✅ <b>Photo update started in the background!</b> You will be notified when it completes.", parse_mode="html")
 
 async def _handle_bulk_2fa_set(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
-    msg = await event.respond("Processing... Please wait ⏳")
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    msg = await event.respond(render_bulk_progress("Set 2FA", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
     from services import bulk_service
     
     async def run_task():
-        success, failed = await bulk_service.bulk_manage_2fa(event.sender_id, text)
-        await event.respond(f"✅ <b>Bulk 2FA Update Complete!</b>\n\n✅ Success: {success}\n❌ Failed: {failed}", parse_mode="html")
+        async def update_progress(success, failed, total):
+            try:
+                await msg.edit(render_bulk_progress("Set 2FA", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+            except Exception: pass
+        success, failed = await bulk_service.bulk_manage_2fa(event.sender_id, text, progress_callback=update_progress)
+        try:
+            await msg.edit(render_bulk_progress("Set 2FA", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+        except Exception: pass
 
     import asyncio
     asyncio.create_task(run_task())
     await set_context(event.sender_id, "awaiting_input", None)
-    await msg.edit("✅ <b>2FA update started in the background!</b> You will be notified when it completes.", parse_mode="html")
