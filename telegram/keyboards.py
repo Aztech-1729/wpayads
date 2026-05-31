@@ -77,7 +77,7 @@ def account_list_keyboard(
             Button.inline(
                 f"{dot} {phone}  •  Health: {health}",
                 f"{action_prefix}:{acc_id}",
-            )
+            style="primary")
         ])
 
     # Pagination row
@@ -87,30 +87,30 @@ def account_list_keyboard(
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline(_b("⏪ First"), f"page:next:{screen}:1"))
-            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:{screen}:{current - 1}"))
-        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+            nav_row.append(Button.inline(_b("⏪ First"), f"page:next:{screen}:1", style="primary"))
+            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:{screen}:{current - 1}", style="primary"))
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP, style="primary"))
         if current < total:
-            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:{screen}:{current + 1}"))
-            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:{screen}:{total}"))
+            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:{screen}:{current + 1}", style="primary"))
+            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:{screen}:{total}", style="primary"))
         rows.append(nav_row)
 
     # Action row
     if show_actions:
         rows.append([
-            Button.inline(_b("➕ Add Account"), CB.ACCOUNT_ADD),
-            Button.inline(_b("📂 Upload Sessions"), CB.ACCOUNT_UPLOAD_SESSIONS),
+            Button.inline(_b("➕ Add Account"), CB.ACCOUNT_ADD, style="primary"),
+            Button.inline(_b("📂 Upload Sessions"), CB.ACCOUNT_UPLOAD_SESSIONS, style="primary"),
         ])
         rows.append([
-            Button.inline(_b("🗑 Remove Limited"), CB.ACCOUNT_DELETE_LIMITED),
-            Button.inline(_b("🗑 Remove All"), CB.ACCOUNT_DELETE_ALL),
+            Button.inline(_b("🗑 Remove Limited"), CB.ACCOUNT_DELETE_LIMITED, style="primary"),
+            Button.inline(_b("🗑 Remove All"), CB.ACCOUNT_DELETE_ALL, style="primary"),
         ])
         rows.append([
-            Button.inline(_b("🔄 Refresh"), CB.ACCOUNTS),
+            Button.inline(_b("🔄 Refresh"), CB.ACCOUNTS, style="primary"),
         ])
 
     # Back
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD)])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
 
     return rows
 
@@ -124,20 +124,20 @@ def account_detail_keyboard(account_id: str, status: str, back_cb: str = CB.ACCO
     # Pause/Resume based on status
     if status in ("ACTIVE", "WARNING", "HEALTHY"):
         rows.append([
-            Button.inline(_b("⏸ Pause"), f"acc:pause:{account_id}"),
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}"),
+            Button.inline(_b("⏸ Pause"), f"acc:pause:{account_id}", style="primary"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
         ])
     elif status == "PAUSED":
         rows.append([
-            Button.inline(_b("▶️ Resume"), f"acc:resume:{account_id}"),
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}"),
+            Button.inline(_b("▶️ Resume"), f"acc:resume:{account_id}", style="primary"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
         ])
     else:
         rows.append([
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
         ])
 
-    rows.append([Button.inline(_b("← Back"), back_cb)])
+    rows.append([Button.inline(_b("← Back"), back_cb, style="primary")])
 
     return rows
 
@@ -161,7 +161,7 @@ def campaign_list_keyboard(
             Button.inline(
                 f"{emoji} {name}  •  {status}",
                 f"cmp:view:{cmp_id}",
-            )
+            style="primary")
         ])
 
     # Pagination
@@ -171,21 +171,21 @@ def campaign_list_keyboard(
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline("⏪ First", f"page:next:campaigns:1"))
-            nav_row.append(Button.inline("◀ Prev", f"page:prev:campaigns:{current - 1}"))
-        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+            nav_row.append(Button.inline("⏪ First", f"page:next:campaigns:1", style="primary"))
+            nav_row.append(Button.inline("◀ Prev", f"page:prev:campaigns:{current - 1}", style="primary"))
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP, style="primary"))
         if current < total:
-            nav_row.append(Button.inline("Next ▶", f"page:next:campaigns:{current + 1}"))
-            nav_row.append(Button.inline("Last ⏩", f"page:next:campaigns:{total}"))
+            nav_row.append(Button.inline("Next ▶", f"page:next:campaigns:{current + 1}", style="primary"))
+            nav_row.append(Button.inline("Last ⏩", f"page:next:campaigns:{total}", style="primary"))
         rows.append(nav_row)
 
     # Actions
     rows.append([
-        Button.inline(_b("➕ New Campaign"), CB.CAMPAIGN_CREATE),
-        Button.inline(_b("🔄 Refresh"), CB.CAMPAIGNS),
+        Button.inline(_b("➕ New Campaign"), CB.CAMPAIGN_CREATE, style="primary"),
+        Button.inline(_b("🔄 Refresh"), CB.CAMPAIGNS, style="primary"),
     ])
 
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD)])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
 
     return rows
 
@@ -199,32 +199,32 @@ def campaign_detail_keyboard(campaign_id: str, status: str) -> list[list[Button]
     # Start/Pause
     if status in ("DRAFT", "PAUSED"):
         rows.append([
-            Button.inline(_b("▶️ Start"), f"cmp:resume:{campaign_id}"),
+            Button.inline(_b("▶️ Start"), f"cmp:resume:{campaign_id}", style="primary"),
         ])
     elif status == "ACTIVE":
         rows.append([
-            Button.inline(_b("⏸ Pause"), f"cmp:pause:{campaign_id}"),
+            Button.inline(_b("⏸ Pause"), f"cmp:pause:{campaign_id}", style="primary"),
         ])
 
     # Configuration
     rows.append([
-        Button.inline(_b("📝 Set Ad"), f"cmp:set_ad:{campaign_id}"),
-        Button.inline(_b("⏱ Set Interval"), f"cmp:set_interval:{campaign_id}"),
+        Button.inline(_b("📝 Set Ad"), f"cmp:set_ad:{campaign_id}", style="primary"),
+        Button.inline(_b("⏱ Set Interval"), f"cmp:set_interval:{campaign_id}", style="primary"),
     ])
     rows.append([
-        Button.inline(_b("🔄 Set Rounds"), f"cmp:set_rounds:{campaign_id}"),
-        Button.inline(_b("👥 Manage Accounts"), f"cmp:manage_acc:{campaign_id}"),
+        Button.inline(_b("🔄 Set Rounds"), f"cmp:set_rounds:{campaign_id}", style="primary"),
+        Button.inline(_b("👥 Manage Accounts"), f"cmp:manage_acc:{campaign_id}", style="primary"),
     ])
 
 
 
     # Delete / Duplicate
     rows.append([
-        Button.inline(_b("📋 Duplicate"), f"cmp:dup:{campaign_id}"),
-        Button.inline(_b("🗑 Delete"), f"cmp:del:{campaign_id}"),
+        Button.inline(_b("📋 Duplicate"), f"cmp:dup:{campaign_id}", style="primary"),
+        Button.inline(_b("🗑 Delete"), f"cmp:del:{campaign_id}", style="primary"),
     ])
 
-    rows.append([Button.inline(_b("← Back"), CB.CAMPAIGNS)])
+    rows.append([Button.inline(_b("← Back"), CB.CAMPAIGNS, style="primary")])
 
     return rows
 
@@ -234,10 +234,10 @@ def campaign_set_ad_keyboard(campaign_id: str, current_ad_type: str = "custom") 
     f_mark = "✅ " if current_ad_type == "forward" else ""
     return [
         [
-            Button.inline(f"{c_mark}📝 Custom Message", f"cmp:set_ad:custom:{campaign_id}"),
-            Button.inline(f"{f_mark}🔗 Forward Post", f"cmp:set_ad:forward:{campaign_id}"),
+            Button.inline(f"{c_mark}📝 Custom Message", f"cmp:set_ad:custom:{campaign_id}", style="primary"),
+            Button.inline(f"{f_mark}🔗 Forward Post", f"cmp:set_ad:forward:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
     ]
 
 
@@ -245,10 +245,10 @@ def campaign_set_interval_keyboard(campaign_id: str) -> list[list[Button]]:
     """Menu to set intervals."""
     return [
         [
-            Button.inline("⏱ Group Delay", f"cmp:set_interval:group:{campaign_id}"),
-            Button.inline("⏱ Round Delay", f"cmp:set_interval:round:{campaign_id}"),
+            Button.inline("⏱ Group Delay", f"cmp:set_interval:group:{campaign_id}", style="primary"),
+            Button.inline("⏱ Round Delay", f"cmp:set_interval:round:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
     ]
 
 
@@ -258,10 +258,10 @@ def campaign_set_rounds_keyboard(campaign_id: str, max_rounds: int = 0) -> list[
     i_mark = "✅ " if max_rounds == 0 else ""
     return [
         [
-            Button.inline(f"{m_mark}🔢 Set Max Rounds", f"cmp:set_rounds:max:{campaign_id}"),
-            Button.inline(f"{i_mark}♾️ Run 24/7", f"cmp:set_rounds:infinite:{campaign_id}"),
+            Button.inline(f"{m_mark}🔢 Set Max Rounds", f"cmp:set_rounds:max:{campaign_id}", style="primary"),
+            Button.inline(f"{i_mark}♾️ Run 24/7", f"cmp:set_rounds:infinite:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
     ]
 
 
@@ -278,11 +278,11 @@ def campaign_manage_accounts_keyboard(
     total_items = pagination.get("total_items", 0)
     if total_items > 0 and len(assigned_ids) >= total_items:
         rows.append([
-            Button.inline(_b("❌ Unselect All Accounts"), f"cmp:unall_acc:{campaign_id}"),
+            Button.inline(_b("❌ Unselect All Accounts"), f"cmp:unall_acc:{campaign_id}", style="primary"),
         ])
     else:
         rows.append([
-            Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}"),
+            Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}", style="primary"),
         ])
 
     # 2. Accounts List
@@ -290,7 +290,7 @@ def campaign_manage_accounts_keyboard(
         acc_id = str(acc.get("id", ""))
         phone = acc.get("phone", "Unknown")
         mark = "🟢" if acc_id in assigned_ids else "🔴"
-        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}")])
+        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}", style="primary")])
     
     # 3. Pagination
     current = pagination.get("current_page", 1)
@@ -299,16 +299,16 @@ def campaign_manage_accounts_keyboard(
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline(_b("⬅️ Prev"), f"page:prev:cmp_acc:{current-1}"))
+            nav_row.append(Button.inline(_b("⬅️ Prev"), f"page:prev:cmp_acc:{current-1}", style="primary"))
         
-        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP, style="primary"))
         
         if current < total:
-            nav_row.append(Button.inline(_b("Next ➡️"), f"page:next:cmp_acc:{current+1}"))
+            nav_row.append(Button.inline(_b("Next ➡️"), f"page:next:cmp_acc:{current+1}", style="primary"))
         rows.append(nav_row)
 
     # 4. Back
-    rows.append([Button.inline(_b("← Back"), f"cmp:view:{campaign_id}")])
+    rows.append([Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="primary")])
     return rows
 
 
@@ -317,12 +317,12 @@ def campaign_account_detail_keyboard(campaign_id: str, account_id: str, is_assig
     toggle_text = _b("❌ Remove from Campaign") if is_assigned else _b("✅ Add to Campaign")
     rows = [
         [
-            Button.inline(toggle_text, "cmp:toggle_acc"),
+            Button.inline(toggle_text, "cmp:toggle_acc", style="primary"),
         ],
         [
-            Button.inline(_b("👥 Select Groups"), "cmp:acc_groups:1"),
+            Button.inline(_b("👥 Select Groups"), "cmp:acc_groups:1", style="primary"),
         ],
-        [Button.inline(_b("← Back"), f"cmp:manage_acc:{campaign_id}")],
+        [Button.inline(_b("← Back"), f"cmp:manage_acc:{campaign_id}", style="primary")],
     ]
     return rows
 
@@ -348,7 +348,7 @@ def campaign_account_groups_keyboard(
             title = title[:13] + ".."
             
         page = pagination.get("page", 1)
-        current_row.append(Button.inline(f"{mark} {title}", f"cmp:toggle_grp:{group_id_str}"))
+        current_row.append(Button.inline(f"{mark} {title}", f"cmp:toggle_grp:{group_id_str}", style="primary"))
         
         if len(current_row) == 2:
             rows.append(current_row)
@@ -363,20 +363,20 @@ def campaign_account_groups_keyboard(
     
     nav_row = []
     if page > 1:
-        nav_row.append(Button.inline("⬅️ Prev", f"cmp:acc_groups:{page-1}"))
+        nav_row.append(Button.inline("⬅️ Prev", f"cmp:acc_groups:{page-1}", style="primary"))
     if page < total_pages:
-        nav_row.append(Button.inline("Next ➡️", f"cmp:acc_groups:{page+1}"))
+        nav_row.append(Button.inline("Next ➡️", f"cmp:acc_groups:{page+1}", style="primary"))
         
     if nav_row:
         rows.append(nav_row)
         
     # Select All / Deselect All
     rows.append([
-        Button.inline("✅ Select All", "cmp:grp_all"),
-        Button.inline("❌ Clear All", "cmp:grp_none"),
+        Button.inline("✅ Select All", "cmp:grp_all", style="primary"),
+        Button.inline("❌ Clear All", "cmp:grp_none", style="primary"),
     ])
         
-    rows.append([Button.inline("← Back to Account", f"cmp:acc_detail:{account_id}")])
+    rows.append([Button.inline("← Back to Account", f"cmp:acc_detail:{account_id}", style="primary")])
     return rows
 
 # ── 6. ANALYTICS ──────────────────────────────────────────
@@ -384,8 +384,8 @@ def campaign_account_groups_keyboard(
 def analytics_keyboard() -> list[list[Button]]:
     """Analytics overview buttons."""
     return [
-        [Button.inline(_b("🔄 Refresh"), CB.ANALYTICS)],
-        [Button.inline(_b("← Back"), CB.DASHBOARD)],
+        [Button.inline(_b("🔄 Refresh"), CB.ANALYTICS, style="primary")],
+        [Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")],
     ]
 
 
@@ -395,13 +395,13 @@ def health_overview_keyboard() -> list[list[Button]]:
     """Health overview buttons."""
     return [
         [
-            Button.inline(_b("🔄 Refresh Now"), CB.HEALTH),
-            Button.inline(_b("👁 View All"), CB.HEALTH_VIEW_ALL),
+            Button.inline(_b("🔄 Refresh Now"), CB.HEALTH, style="primary"),
+            Button.inline(_b("👁 View All"), CB.HEALTH_VIEW_ALL, style="primary"),
         ],
         [
-            Button.inline(_b("⚙️ Health Settings"), CB.HEALTH_SETTINGS),
+            Button.inline(_b("⚙️ Health Settings"), CB.HEALTH_SETTINGS, style="primary"),
         ],
-        [Button.inline(_b("← Back"), CB.DASHBOARD)],
+        [Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")],
     ]
 
 
@@ -410,10 +410,10 @@ def health_settings_keyboard(auto_pause: bool) -> list[list[Button]]:
     toggle_btn = Button.inline(
         _b("Auto-Pause Unhealthy: ✅ ON") if auto_pause else _b("Auto-Pause Unhealthy: ❌ OFF"),
         CB.HEALTH_SETTINGS_TOGGLE
-    )
+    , style="primary")
     return [
         [toggle_btn],
-        [Button.inline(_b("← Back"), CB.HEALTH)],
+        [Button.inline(_b("← Back"), CB.HEALTH, style="primary")],
     ]
 
 
@@ -440,30 +440,30 @@ def groups_list_keyboard(
             group_id=g["group_id"], 
             page=pagination["page"]
         )
-        buttons.append([Button.inline(f"{mark} {title}", cb_data)])
+        buttons.append([Button.inline(f"{mark} {title}", cb_data, style="primary")])
         
     # 2. Select All
     buttons.append([
-        Button.inline("✅ Select All Groups", CB.GROUPS_SELECT_ALL.format(account_id=account_id, page=pagination["page"]))
+        Button.inline("✅ Select All Groups", CB.GROUPS_SELECT_ALL.format(account_id=account_id, page=pagination["page"]), style="primary")
     ])
     
     # 3. Pagination row
     nav_row = []
     if pagination["page"] > 1:
         prev_cb = CB.GROUPS_VIEW.format(account_id=account_id, page=pagination["page"] - 1)
-        nav_row.append(Button.inline("⬅️ Prev", prev_cb))
+        nav_row.append(Button.inline("⬅️ Prev", prev_cb, style="primary"))
         
-    nav_row.append(Button.inline(f"{pagination['page']}/{pagination['total_pages']}", CB.NOOP))
+    nav_row.append(Button.inline(f"{pagination['page']}/{pagination['total_pages']}", CB.NOOP, style="primary"))
     
     if pagination["page"] < pagination["total_pages"]:
         next_cb = CB.GROUPS_VIEW.format(account_id=account_id, page=pagination["page"] + 1)
-        nav_row.append(Button.inline("Next ➡️", next_cb))
+        nav_row.append(Button.inline("Next ➡️", next_cb, style="primary"))
         
     if nav_row:
         buttons.append(nav_row)
         
     # 4. Back
-    buttons.append([Button.inline(_b("← Back to Accounts"), CB.GROUPS)])
+    buttons.append([Button.inline(_b("← Back to Accounts"), CB.GROUPS, style="primary")])
     return buttons
 
 def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[list[Button]]:
@@ -480,7 +480,7 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
             Button.inline(
                 f"{dot} {phone}  •  Health: {health}",
                 f"groups:view:{acc_id}:1",
-            )
+            style="primary")
         ])
         
     # Pagination
@@ -490,23 +490,23 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline(_b("⏪ First"), "page:next:groups_menu:1"))
-            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:groups_menu:{current - 1}"))
-        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP))
+            nav_row.append(Button.inline(_b("⏪ First"), "page:next:groups_menu:1", style="primary"))
+            nav_row.append(Button.inline(_b("◀ Prev"), f"page:prev:groups_menu:{current - 1}", style="primary"))
+        nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP, style="primary"))
         if current < total:
-            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:groups_menu:{current + 1}"))
-            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:groups_menu:{total}"))
+            nav_row.append(Button.inline(_b("Next ▶"), f"page:next:groups_menu:{current + 1}", style="primary"))
+            nav_row.append(Button.inline(_b("Last ⏩"), f"page:next:groups_menu:{total}", style="primary"))
         rows.append(nav_row)
         
     # Action Row
-    rows.append([Button.inline(_b("🤖 Auto Join Groups"), CB.AUTO_JOIN)])
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD)])
+    rows.append([Button.inline(_b("🤖 Auto Join Groups"), CB.AUTO_JOIN, style="primary")])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
     return rows
 
 def autojoin_progress_keyboard() -> list[list[Button]]:
     """Keyboard for joiner progress with cancel button."""
     return [
-        [Button.inline(_b("❌ Cancel Joining"), "groups:autojoin:cancel")],
+        [Button.inline(_b("❌ Cancel Joining"), "groups:autojoin:cancel", style="primary")],
     ]
 
 
@@ -516,9 +516,9 @@ def settings_keyboard() -> list[list[Button]]:
     """Settings menu buttons."""
     return [
         [
-            Button.inline("💬 Auto Reply", CB.SETTINGS_AUTOREPLY),
+            Button.inline("💬 Auto Reply", CB.SETTINGS_AUTOREPLY, style="primary"),
         ],
-        [Button.inline("← Back", CB.DASHBOARD)],
+        [Button.inline("← Back", CB.DASHBOARD, style="primary")],
     ]
 
 
@@ -527,14 +527,14 @@ def autoreply_keyboard(enabled: bool, has_custom: bool) -> list[list[Button]]:
     toggle_btn = Button.inline(
         _b("Turn OFF") if enabled else _b("Turn ON"), 
         CB.SETTINGS_AUTOREPLY_TOGGLE
-    )
+    , style="primary")
     buttons = [[toggle_btn]]
     
     if has_custom:
-        buttons.append([Button.inline(_b("View Current"), CB.SETTINGS_AUTOREPLY_VIEW)])
+        buttons.append([Button.inline(_b("View Current"), CB.SETTINGS_AUTOREPLY_VIEW, style="primary")])
         
-    buttons.append([Button.inline(_b("Set Custom Reply"), CB.SETTINGS_AUTOREPLY_CUSTOM)])
-    buttons.append([Button.inline(_b("← Back"), CB.DASHBOARD)])
+    buttons.append([Button.inline(_b("Set Custom Reply"), CB.SETTINGS_AUTOREPLY_CUSTOM, style="primary")])
+    buttons.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
     
     return buttons
 
@@ -543,15 +543,15 @@ def autoreply_keyboard(enabled: bool, has_custom: bool) -> list[list[Button]]:
 
 def back_keyboard(target: str = CB.DASHBOARD) -> list[list[Button]]:
     """Single back button."""
-    return [[Button.inline(_b("← Back"), target)]]
+    return [[Button.inline(_b("← Back"), target, style="primary")]]
 
 
 def confirm_keyboard(action: str, target_id: str) -> list[list[Button]]:
     """Yes/No confirmation buttons."""
     return [
         [
-            Button.inline(_b("✅ Yes, confirm"), f"confirm:yes:{action}:{target_id}"),
-            Button.inline(_b("❌ Cancel"), CB.CONFIRM_NO),
+            Button.inline(_b("✅ Yes, confirm"), f"confirm:yes:{action}:{target_id}", style="primary"),
+            Button.inline(_b("❌ Cancel"), CB.CONFIRM_NO, style="primary"),
         ],
     ]
 
@@ -559,6 +559,6 @@ def logs_bot_activation_keyboard(bot_username: str, campaign_id: str) -> list[li
     """Keyboard shown when user hasn't started the logs bot."""
     return [
         [Button.url(_b("🤖 Start Logs Bot"), f"https://t.me/{bot_username}")],
-        [Button.inline(_b("🔄 I have started it"), f"confirm:yes:resume_campaign:{campaign_id}")],
-        [Button.inline(_b("← Back"), f"cmp:view:{campaign_id}")],
+        [Button.inline(_b("🔄 I have started it"), f"confirm:yes:resume_campaign:{campaign_id}", style="primary")],
+        [Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="primary")],
     ]
