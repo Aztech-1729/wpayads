@@ -73,11 +73,12 @@ def account_list_keyboard(
         phone = acc.get("phone", "???")
         health = acc.get("health_score", 0)
         dot = "🟢" if health >= 80 else "🟡" if health >= 50 else "🔴"
+        btn_style = "success" if health >= 80 else "primary" if health >= 50 else "danger"
         rows.append([
             Button.inline(
                 f"{dot} {phone}  •  Health: {health}",
                 f"{action_prefix}:{acc_id}",
-            style="primary")
+            style=btn_style)
         ])
 
     # Pagination row
@@ -102,8 +103,8 @@ def account_list_keyboard(
             Button.inline(_b("📂 Upload Sessions"), CB.ACCOUNT_UPLOAD_SESSIONS, style="primary"),
         ])
         rows.append([
-            Button.inline(_b("🗑 Remove Limited"), CB.ACCOUNT_DELETE_LIMITED, style="primary"),
-            Button.inline(_b("🗑 Remove All"), CB.ACCOUNT_DELETE_ALL, style="primary"),
+            Button.inline(_b("🗑 Remove Limited"), CB.ACCOUNT_DELETE_LIMITED, style="danger"),
+            Button.inline(_b("🗑 Remove All"), CB.ACCOUNT_DELETE_ALL, style="danger"),
         ])
         rows.append([
             Button.inline(_b("🔄 Refresh"), CB.ACCOUNTS, style="primary"),
@@ -124,17 +125,17 @@ def account_detail_keyboard(account_id: str, status: str, back_cb: str = CB.ACCO
     # Pause/Resume based on status
     if status in ("ACTIVE", "WARNING", "HEALTHY"):
         rows.append([
-            Button.inline(_b("⏸ Pause"), f"acc:pause:{account_id}", style="primary"),
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
+            Button.inline(_b("⏸ Pause"), f"acc:pause:{account_id}", style="danger"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="danger"),
         ])
     elif status == "PAUSED":
         rows.append([
-            Button.inline(_b("▶️ Resume"), f"acc:resume:{account_id}", style="primary"),
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
+            Button.inline(_b("▶️ Resume"), f"acc:resume:{account_id}", style="success"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="danger"),
         ])
     else:
         rows.append([
-            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="primary"),
+            Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="danger"),
         ])
 
     rows.append([Button.inline(_b("← Back"), back_cb, style="primary")])
@@ -156,12 +157,13 @@ def campaign_list_keyboard(
         name = c.get("name", "Untitled")
         status = c.get("status", "DRAFT")
         emoji = {"ACTIVE": "🟢", "PAUSED": "🟡", "DRAFT": "📝", "COMPLETED": "✅"}.get(status, "⚫")
+        btn_style = "success" if status in ("ACTIVE", "COMPLETED") else "primary" if status == "DRAFT" else "danger"
 
         rows.append([
             Button.inline(
                 f"{emoji} {name}  •  {status}",
                 f"cmp:view:{cmp_id}",
-            style="primary")
+            style=btn_style)
         ])
 
     # Pagination
@@ -199,11 +201,11 @@ def campaign_detail_keyboard(campaign_id: str, status: str) -> list[list[Button]
     # Start/Pause
     if status in ("DRAFT", "PAUSED"):
         rows.append([
-            Button.inline(_b("▶️ Start"), f"cmp:resume:{campaign_id}", style="primary"),
+            Button.inline(_b("▶️ Start"), f"cmp:resume:{campaign_id}", style="success"),
         ])
     elif status == "ACTIVE":
         rows.append([
-            Button.inline(_b("⏸ Pause"), f"cmp:pause:{campaign_id}", style="primary"),
+            Button.inline(_b("⏸ Pause"), f"cmp:pause:{campaign_id}", style="danger"),
         ])
 
     # Configuration
@@ -221,7 +223,7 @@ def campaign_detail_keyboard(campaign_id: str, status: str) -> list[list[Button]
     # Delete / Duplicate
     rows.append([
         Button.inline(_b("📋 Duplicate"), f"cmp:dup:{campaign_id}", style="primary"),
-        Button.inline(_b("🗑 Delete"), f"cmp:del:{campaign_id}", style="primary"),
+        Button.inline(_b("🗑 Delete"), f"cmp:del:{campaign_id}", style="danger"),
     ])
 
     rows.append([Button.inline(_b("← Back"), CB.CAMPAIGNS, style="primary")])
@@ -476,11 +478,12 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
         phone = acc.get("phone", "???")
         health = acc.get("health_score", 0)
         dot = "🟢" if health >= 80 else "🟡" if health >= 50 else "🔴"
+        btn_style = "success" if health >= 80 else "primary" if health >= 50 else "danger"
         rows.append([
             Button.inline(
                 f"{dot} {phone}  •  Health: {health}",
                 f"groups:view:{acc_id}:1",
-            style="primary")
+            style=btn_style)
         ])
         
     # Pagination
@@ -506,7 +509,7 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
 def autojoin_progress_keyboard() -> list[list[Button]]:
     """Keyboard for joiner progress with cancel button."""
     return [
-        [Button.inline(_b("❌ Cancel Joining"), "groups:autojoin:cancel", style="primary")],
+        [Button.inline(_b("❌ Cancel Joining"), "groups:autojoin:cancel", style="danger")],
     ]
 
 
@@ -524,10 +527,12 @@ def settings_keyboard() -> list[list[Button]]:
 
 def autoreply_keyboard(enabled: bool, has_custom: bool) -> list[list[Button]]:
     """Auto Reply settings menu."""
+    toggle_text = _b("Turn OFF") if enabled else _b("Turn ON")
+    toggle_style = "danger" if enabled else "success"
     toggle_btn = Button.inline(
-        _b("Turn OFF") if enabled else _b("Turn ON"), 
+        toggle_text, 
         CB.SETTINGS_AUTOREPLY_TOGGLE
-    , style="primary")
+    , style=toggle_style)
     buttons = [[toggle_btn]]
     
     if has_custom:
@@ -550,8 +555,8 @@ def confirm_keyboard(action: str, target_id: str) -> list[list[Button]]:
     """Yes/No confirmation buttons."""
     return [
         [
-            Button.inline(_b("✅ Yes, confirm"), f"confirm:yes:{action}:{target_id}", style="primary"),
-            Button.inline(_b("❌ Cancel"), CB.CONFIRM_NO, style="primary"),
+            Button.inline(_b("✅ Yes, confirm"), f"confirm:yes:{action}:{target_id}", style="success"),
+            Button.inline(_b("❌ Cancel"), CB.CONFIRM_NO, style="danger"),
         ],
     ]
 
