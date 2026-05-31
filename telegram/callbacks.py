@@ -1116,7 +1116,7 @@ async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None
     await event.answer()
     if action == "name":
         await set_context(event.sender_id, "awaiting_input", "bulk_name_first")
-        await event.edit("Please send the <b>new First Name</b> for all accounts.\n\n<i>Tip: Type {rand} to inject a random 4-digit number.</i>", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+        await event.edit("Please send the <b>new First Name</b> for all accounts.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
     elif action == "bio":
         await set_context(event.sender_id, "awaiting_input", "bulk_bio")
         await event.edit("Please send the <b>new Bio/About</b> for all accounts.\n\n⚠️ <b>Important:</b> Telegram strictly allows a <b>MAXIMUM of 70 characters</b>.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")

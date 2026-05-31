@@ -621,10 +621,6 @@ async def _handle_cmp_rounds_max(event, campaign_id: str):
 async def _handle_bulk_name_first(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
     
-    if "{rand}" in text:
-        import random, string
-        text = text.replace("{rand}", "".join(random.choices(string.digits, k=4)))
-        
     await set_context(event.sender_id, "bulk_first_name", text)
     await set_context(event.sender_id, "awaiting_input", "bulk_name_last")
     from telegram.keyboards import back_keyboard
@@ -639,10 +635,6 @@ async def _handle_bulk_name_first(event: events.NewMessage.Event) -> None:
 async def _handle_bulk_name_last(event: events.NewMessage.Event) -> None:
     last_name = event.text.strip()
     
-    if "{rand}" in last_name:
-        import random, string
-        last_name = last_name.replace("{rand}", "".join(random.choices(string.digits, k=4)))
-        
     if last_name == "." or not last_name:
         last_name = ""
         
