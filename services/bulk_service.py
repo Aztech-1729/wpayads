@@ -45,6 +45,12 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
     # Mark task as active
     _active_bulk_tasks[owner_id] = True
 
+    if progress_callback:
+        try:
+            await progress_callback(0, 0, total)
+        except Exception:
+            pass
+
     async def _task(acc):
         try:
             async with client_pool.acquire(str(acc.id)) as client:
@@ -109,8 +115,16 @@ async def bulk_update_username(owner_id: int, username: str, progress_callback=N
 
 async def bulk_upload_profile_photo(owner_id: int, file_path: str, progress_callback=None) -> tuple[int, int]:
     """Bulk upload a profile photo."""
+    # Read file into memory ONCE to prevent 100+ clients locking the same file concurrently
+    import os
+    if not os.path.exists(file_path):
+        return 0, 0
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
     async def _action(client, acc):
-        file = await client.upload_file(file_path)
+        # upload_file accepts bytes directly!
+        file = await client.upload_file(file_bytes)
         await client(UploadProfilePhotoRequest(file=file))
 
     return await _execute_bulk(owner_id, _action, progress_callback)
