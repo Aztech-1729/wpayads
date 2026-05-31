@@ -121,9 +121,9 @@ async def _run_joiner_task(user_id: int, links: List[str], update_callback) -> N
                 
                 await _safe_update(joined_inc=joined_inc, failed_inc=failed_inc)
                 
-                # Delay for each account independently (stay under 50/hour = 72s minimum)
+                # Delay for each account independently (stay under 200/hour = 18s minimum)
                 if i < len(links) - 1:
-                    await asyncio.sleep(random.uniform(72, 85))
+                    await asyncio.sleep(random.uniform(18, 25))
 
         # Run all account workers concurrently
         tasks = [_account_worker(account) for account in accounts]

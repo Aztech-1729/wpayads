@@ -449,7 +449,7 @@ def render_autojoin_prompt() -> str:
         "├ 3. Send the file to this bot.\n"
         "└ 4. Only <b>Groups</b> will be joined (Channels ignored).\n\n"
         "⚠️ <b>SAFETY LIMITS:</b>\n"
-        "├ <b>Rate:</b> ~50 groups per hour per account.\n"
+        "├ <b>Rate:</b> ~200 groups per hour per account.\n"
         "├ <b>Delays:</b> Random intervals between joins.\n"
         "└ <b>Lock:</b> Campaigns are locked until finished.\n\n"
         "Please upload your <b>.txt</b> file now."

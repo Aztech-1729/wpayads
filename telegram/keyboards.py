@@ -111,7 +111,7 @@ def account_list_keyboard(
         ])
 
     # Back
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")])
 
     return rows
 
@@ -138,7 +138,7 @@ def account_detail_keyboard(account_id: str, status: str, back_cb: str = CB.ACCO
             Button.inline(_b("🗑 Remove"), f"acc:del:{account_id}", style="danger"),
         ])
 
-    rows.append([Button.inline(_b("← Back"), back_cb, style="primary")])
+    rows.append([Button.inline(_b("← Back"), back_cb, style="danger")])
 
     return rows
 
@@ -187,7 +187,7 @@ def campaign_list_keyboard(
         Button.inline(_b("🔄 Refresh"), CB.CAMPAIGNS, style="primary"),
     ])
 
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")])
 
     return rows
 
@@ -226,7 +226,7 @@ def campaign_detail_keyboard(campaign_id: str, status: str) -> list[list[Button]
         Button.inline(_b("🗑 Delete"), f"cmp:del:{campaign_id}", style="danger"),
     ])
 
-    rows.append([Button.inline(_b("← Back"), CB.CAMPAIGNS, style="primary")])
+    rows.append([Button.inline(_b("← Back"), CB.CAMPAIGNS, style="danger")])
 
     return rows
 
@@ -239,7 +239,7 @@ def campaign_set_ad_keyboard(campaign_id: str, current_ad_type: str = "custom") 
             Button.inline(f"{c_mark}📝 Custom Message", f"cmp:set_ad:custom:{campaign_id}", style="primary"),
             Button.inline(f"{f_mark}🔗 Forward Post", f"cmp:set_ad:forward:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="danger")],
     ]
 
 
@@ -250,7 +250,7 @@ def campaign_set_interval_keyboard(campaign_id: str) -> list[list[Button]]:
             Button.inline("⏱ Group Delay", f"cmp:set_interval:group:{campaign_id}", style="primary"),
             Button.inline("⏱ Round Delay", f"cmp:set_interval:round:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="danger")],
     ]
 
 
@@ -263,7 +263,7 @@ def campaign_set_rounds_keyboard(campaign_id: str, max_rounds: int = 0) -> list[
             Button.inline(f"{m_mark}🔢 Set Max Rounds", f"cmp:set_rounds:max:{campaign_id}", style="primary"),
             Button.inline(f"{i_mark}♾️ Run 24/7", f"cmp:set_rounds:infinite:{campaign_id}", style="primary"),
         ],
-        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="primary")],
+        [Button.inline("← Back", f"cmp:view:{campaign_id}", style="danger")],
     ]
 
 
@@ -310,7 +310,7 @@ def campaign_manage_accounts_keyboard(
         rows.append(nav_row)
 
     # 4. Back
-    rows.append([Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="primary")])
+    rows.append([Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="danger")])
     return rows
 
 
@@ -324,7 +324,7 @@ def campaign_account_detail_keyboard(campaign_id: str, account_id: str, is_assig
         [
             Button.inline(_b("👥 Select Groups"), "cmp:acc_groups:1", style="primary"),
         ],
-        [Button.inline(_b("← Back"), f"cmp:manage_acc:{campaign_id}", style="primary")],
+        [Button.inline(_b("← Back"), f"cmp:manage_acc:{campaign_id}", style="danger")],
     ]
     return rows
 
@@ -378,7 +378,7 @@ def campaign_account_groups_keyboard(
         Button.inline("❌ Clear All", "cmp:grp_none", style="primary"),
     ])
         
-    rows.append([Button.inline("← Back to Account", f"cmp:acc_detail:{account_id}", style="primary")])
+    rows.append([Button.inline("← Back to Account", f"cmp:acc_detail:{account_id}", style="danger")])
     return rows
 
 # ── 6. ANALYTICS ──────────────────────────────────────────
@@ -387,7 +387,7 @@ def analytics_keyboard() -> list[list[Button]]:
     """Analytics overview buttons."""
     return [
         [Button.inline(_b("🔄 Refresh"), CB.ANALYTICS, style="primary")],
-        [Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")],
+        [Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")],
     ]
 
 
@@ -403,7 +403,7 @@ def health_overview_keyboard() -> list[list[Button]]:
         [
             Button.inline(_b("⚙️ Health Settings"), CB.HEALTH_SETTINGS, style="primary"),
         ],
-        [Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")],
+        [Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")],
     ]
 
 
@@ -415,7 +415,7 @@ def health_settings_keyboard(auto_pause: bool) -> list[list[Button]]:
     , style="primary")
     return [
         [toggle_btn],
-        [Button.inline(_b("← Back"), CB.HEALTH, style="primary")],
+        [Button.inline(_b("← Back"), CB.HEALTH, style="danger")],
     ]
 
 
@@ -465,7 +465,7 @@ def groups_list_keyboard(
         buttons.append(nav_row)
         
     # 4. Back
-    buttons.append([Button.inline(_b("← Back to Accounts"), CB.GROUPS, style="primary")])
+    buttons.append([Button.inline(_b("← Back to Accounts"), CB.GROUPS, style="danger")])
     return buttons
 
 def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[list[Button]]:
@@ -503,7 +503,7 @@ def groups_management_keyboard(accounts: list[dict], pagination: dict) -> list[l
         
     # Action Row
     rows.append([Button.inline(_b("🤖 Auto Join Groups"), CB.AUTO_JOIN, style="primary")])
-    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
+    rows.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")])
     return rows
 
 def autojoin_progress_keyboard() -> list[list[Button]]:
@@ -521,7 +521,7 @@ def settings_keyboard() -> list[list[Button]]:
         [
             Button.inline("💬 Auto Reply", CB.SETTINGS_AUTOREPLY, style="primary"),
         ],
-        [Button.inline("← Back", CB.DASHBOARD, style="primary")],
+        [Button.inline("← Back", CB.DASHBOARD, style="danger")],
     ]
 
 
@@ -539,7 +539,7 @@ def autoreply_keyboard(enabled: bool, has_custom: bool) -> list[list[Button]]:
         buttons.append([Button.inline(_b("View Current"), CB.SETTINGS_AUTOREPLY_VIEW, style="primary")])
         
     buttons.append([Button.inline(_b("Set Custom Reply"), CB.SETTINGS_AUTOREPLY_CUSTOM, style="primary")])
-    buttons.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="primary")])
+    buttons.append([Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")])
     
     return buttons
 
@@ -548,7 +548,7 @@ def autoreply_keyboard(enabled: bool, has_custom: bool) -> list[list[Button]]:
 
 def back_keyboard(target: str = CB.DASHBOARD) -> list[list[Button]]:
     """Single back button."""
-    return [[Button.inline(_b("← Back"), target, style="primary")]]
+    return [[Button.inline(_b("← Back"), target, style="danger")]]
 
 
 def confirm_keyboard(action: str, target_id: str) -> list[list[Button]]:
@@ -565,5 +565,5 @@ def logs_bot_activation_keyboard(bot_username: str, campaign_id: str) -> list[li
     return [
         [Button.url(_b("🤖 Start Logs Bot"), f"https://t.me/{bot_username}")],
         [Button.inline(_b("🔄 I have started it"), f"confirm:yes:resume_campaign:{campaign_id}", style="primary")],
-        [Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="primary")],
+        [Button.inline(_b("← Back"), f"cmp:view:{campaign_id}", style="danger")],
     ]
