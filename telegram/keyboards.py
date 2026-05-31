@@ -41,16 +41,16 @@ def main_menu_keyboard() -> list[list[Button]]:
     """Main menu buttons — 2-column grid + full-width My Plan."""
     return [
         [
-            Button.inline(_b("📋 Accounts"), CB.ACCOUNTS),
-            Button.inline(_b("📢 Campaigns"), CB.CAMPAIGNS),
+            Button.inline(_b("📋 Accounts"), CB.ACCOUNTS, style="primary"),
+            Button.inline(_b("📢 Campaigns"), CB.CAMPAIGNS, style="primary"),
         ],
         [
-            Button.inline(_b("📊 Analytics"), CB.ANALYTICS),
-            Button.inline(_b("❤️ Health"), CB.HEALTH),
+            Button.inline(_b("📊 Analytics"), CB.ANALYTICS, style="primary"),
+            Button.inline(_b("❤️ Health"), CB.HEALTH, style="primary"),
         ],
         [
-            Button.inline(_b("💬 Auto Reply"), CB.SETTINGS_AUTOREPLY),
-            Button.inline(_b("👥 Groups"), CB.GROUPS),
+            Button.inline(_b("💬 Auto Reply"), CB.SETTINGS_AUTOREPLY, style="primary"),
+            Button.inline(_b("👥 Groups"), CB.GROUPS, style="primary"),
         ],
     ]
 
