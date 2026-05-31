@@ -326,7 +326,14 @@ def campaign_manage_accounts_keyboard(
     """Menu to select accounts for a campaign with pagination."""
     rows = []
     
-    # 1. Quick Actions
+    # 1. Accounts List
+    for acc in accounts:
+        acc_id = str(acc.get("id", ""))
+        phone = acc.get("phone", "Unknown")
+        mark = "🟢" if acc_id in assigned_ids else "🔴"
+        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}", style="primary")])
+        
+    # 2. Quick Actions
     total_items = pagination.get("total_items", 0)
     if total_items > 0 and len(assigned_ids) >= total_items:
         rows.append([
@@ -336,13 +343,6 @@ def campaign_manage_accounts_keyboard(
         rows.append([
             Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}", style="primary"),
         ])
-
-    # 2. Accounts List
-    for acc in accounts:
-        acc_id = str(acc.get("id", ""))
-        phone = acc.get("phone", "Unknown")
-        mark = "🟢" if acc_id in assigned_ids else "🔴"
-        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}", style="primary")])
     
     # 3. Pagination
     current = pagination.get("current_page", 1)
