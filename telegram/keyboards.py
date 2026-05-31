@@ -330,18 +330,20 @@ def campaign_manage_accounts_keyboard(
     for acc in accounts:
         acc_id = str(acc.get("id", ""))
         phone = acc.get("phone", "Unknown")
-        mark = "🟢" if acc_id in assigned_ids else "🔴"
-        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}", style="primary")])
+        is_assigned = acc_id in assigned_ids
+        mark = "🟢" if is_assigned else "🔴"
+        btn_style = "success" if is_assigned else "danger"
+        rows.append([Button.inline(f"{mark} {phone}", f"cmp:acc_detail:{acc_id}", style=btn_style)])
         
     # 2. Quick Actions
     total_items = pagination.get("total_items", 0)
     if total_items > 0 and len(assigned_ids) >= total_items:
         rows.append([
-            Button.inline(_b("❌ Unselect All Accounts"), f"cmp:unall_acc:{campaign_id}", style="primary"),
+            Button.inline(_b("❌ Unselect All Accounts"), f"cmp:unall_acc:{campaign_id}", style="danger"),
         ])
     else:
         rows.append([
-            Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}", style="primary"),
+            Button.inline(_b("✅ Select All Accounts"), f"cmp:all_acc:{campaign_id}", style="success"),
         ])
     
     # 3. Pagination
