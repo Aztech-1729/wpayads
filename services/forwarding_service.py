@@ -262,14 +262,20 @@ async def forward_to_groups(
     # If ad_type is forward, resolve the link to get the message to forward
     if getattr(campaign, "ad_type", "custom") == "forward" and getattr(campaign, "forward_link", None):
         try:
-            # Simple parsing of t.me/channel/123
+            # Parse t.me/channel/123 or t.me/c/12345/123
             link = campaign.forward_link.strip().rstrip("/")
             parts = link.split("/")
             msg_id = int(parts[-1])
-            channel_name = parts[-2]
+            
+            if len(parts) >= 3 and parts[-3] == "c":
+                # Private channel
+                channel_entity = int("-100" + parts[-2])
+            else:
+                # Public channel
+                channel_entity = parts[-2]
             
             # Fetch the message to use it as the source for forward_messages
-            message_obj = await client.get_messages(channel_name, ids=msg_id)
+            message_obj = await client.get_messages(channel_entity, ids=msg_id)
             if not message_obj:
                 raise ValueError("Message not found from link")
         except Exception as e:
