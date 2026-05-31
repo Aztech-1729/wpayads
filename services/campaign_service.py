@@ -124,7 +124,14 @@ async def select_all_accounts(campaign_id: str, owner_id: int) -> None:
     # 1. Get all accounts
     accounts = await accounts_repo.list_by_owner(owner_id)
     
-    # 2. Build account_ids list and flat group_ids list
+    import asyncio
+    
+    # 2. Fetch groups concurrently for all accounts if missing
+    fetch_tasks = [account_groups_repo.fetch_groups_if_missing(str(acc.id)) for acc in accounts]
+    if fetch_tasks:
+        await asyncio.gather(*fetch_tasks)
+    
+    # 3. Build account_ids list and flat group_ids list
     acc_ids = []
     all_group_ids = []
     
@@ -138,7 +145,7 @@ async def select_all_accounts(campaign_id: str, owner_id: int) -> None:
             if gid not in all_group_ids:
                 all_group_ids.append(gid)
         
-    # 3. Update campaign
+    # 4. Update campaign
     await campaigns_repo.update_fields(campaign_id, {
         "account_ids": acc_ids,
         "group_ids": all_group_ids,

@@ -109,3 +109,22 @@ async def delete_by_account(account_id: str) -> bool:
     """Delete all groups belonging to an account."""
     result = await _coll().delete_many({"account_id": account_id})
     return result.deleted_count > 0
+
+
+async def fetch_groups_if_missing(account_id: str) -> None:
+    """Check if groups exist in DB, and if not, fetch them from Telegram."""
+    total = await _coll().count_documents({"account_id": account_id})
+    if total > 0:
+        return
+        
+    try:
+        from telegram.client_pool import client_pool
+        async with client_pool.acquire(account_id) as client:
+            dialogs = await client.get_dialogs()
+            groups = [
+                {"id": d.id, "title": d.title, "is_selected": False}
+                for d in dialogs if d.is_group or d.is_channel
+            ]
+            await save_groups(account_id, groups)
+    except Exception:
+        pass

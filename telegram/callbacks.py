@@ -372,6 +372,9 @@ async def on_campaign_account_toggle(event: events.CallbackQuery.Event) -> None:
     current_groups = [str(gid) for gid in camp.group_ids]
     account_id_str = str(account_id)
     
+    # Ensure groups are fetched if this account hasn't been synced yet
+    await account_groups_repo.fetch_groups_if_missing(account_id_str)
+    
     # Get all groups for this account to add/remove them as well
     all_account_groups = await account_groups_repo.get_all_group_ids(account_id_str)
     
