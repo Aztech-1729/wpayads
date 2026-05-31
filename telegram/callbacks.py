@@ -400,7 +400,6 @@ async def on_campaign_account_toggle(event: events.CallbackQuery.Event) -> None:
 async def on_campaign_acc_detail(event: events.CallbackQuery.Event, account_id: str) -> None:
 
     """Show details for an account inside a campaign context."""
-    await event.answer()
     from services import campaign_service
     from repositories import accounts_repo, account_groups_repo
     
@@ -419,8 +418,24 @@ async def on_campaign_acc_detail(event: events.CallbackQuery.Event, account_id: 
         await event.answer("Account not found", alert=True)
         return
         
-    _, pagination = await account_groups_repo.get_groups_paginated(account_id, 1, 1)
-    total_groups = pagination.get("total", 0)
+    # Check if we have groups, if not, fetch them
+    total_groups = await account_groups_repo._coll().count_documents({"account_id": account_id})
+    if total_groups == 0:
+        await event.answer("Fetching groups... this may take a few seconds.")
+        try:
+            from telegram.client_pool import client_pool
+            async with client_pool.acquire(account_id) as client:
+                dialogs = await client.get_dialogs()
+                groups = [
+                    {"id": d.id, "title": d.title, "is_selected": False}
+                    for d in dialogs if d.is_group or d.is_channel
+                ]
+                await account_groups_repo.save_groups(account_id, groups)
+                total_groups = len(groups)
+        except Exception as exc:
+            pass # Ignore and continue with 0 groups
+    else:
+        await event.answer()
     
     phone = account.phone or "Unknown"
     

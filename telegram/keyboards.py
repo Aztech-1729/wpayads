@@ -50,7 +50,7 @@ def main_menu_keyboard() -> list[list[Button]]:
         ],
         [
             Button.inline(_b("💬 Auto Reply"), CB.SETTINGS_AUTOREPLY, style="primary"),
-            Button.inline(_b("👥 Groups"), CB.GROUPS, style="primary"),
+            Button.inline(_b("🤖 Auto Join"), CB.AUTO_JOIN, style="primary"),
         ],
     ]
 
