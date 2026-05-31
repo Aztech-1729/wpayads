@@ -975,6 +975,23 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             cancel_bulk_task(event.sender_id)
             await event.answer("🛑 Cancelling bulk task...", alert=True)
 
+        elif action == "bulk_rm_username":
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Remove Usernames", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
+            from services import bulk_service
+            async def run_task():
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Remove Usernames", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await bulk_service.bulk_remove_usernames(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Remove Usernames", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
+            import asyncio
+            asyncio.create_task(run_task())
+            
         elif action == "bulk_rm_photo":
             from telegram.menus import render_bulk_progress
             from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
@@ -1098,14 +1115,14 @@ async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None
     """Handle bulk manager buttons."""
     await event.answer()
     if action == "name":
-        await set_context(event.sender_id, "awaiting_input", "bulk_name")
+        await set_context(event.sender_id, "awaiting_input", "bulk_name_first")
         await event.edit("Please send the <b>new First Name</b> for all accounts.\n\n<i>Tip: Type {rand} to inject a random 4-digit number.</i>", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
     elif action == "bio":
         await set_context(event.sender_id, "awaiting_input", "bulk_bio")
-        await event.edit("Please send the <b>new Bio/About</b> for all accounts.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
-    elif action == "username":
-        await set_context(event.sender_id, "awaiting_input", "bulk_username")
-        await event.edit("Please send the <b>base username</b>.\n\nThe bot will automatically append a random 4-digit number to make them unique.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+        await event.edit("Please send the <b>new Bio/About</b> for all accounts.\n\n⚠️ <b>Important:</b> Telegram strictly allows a <b>MAXIMUM of 70 characters</b>.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+    elif action == "rm_username":
+        buttons = keyboards.confirm_keyboard("bulk_rm_username", "all")
+        await event.edit("🚫 <b>Remove Usernames?</b>\n\nThis will completely remove the usernames from all connected accounts.", buttons=buttons, parse_mode="html")
     elif action == "photo":
         await set_context(event.sender_id, "awaiting_input", "bulk_photo")
         await event.edit("Please send the <b>new Profile Photo</b>.", buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")

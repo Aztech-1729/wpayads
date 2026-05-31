@@ -190,7 +190,7 @@ class CB:
     BULK_MANAGER = "bulk:manager"
     BULK_NAME = "bulk:name"
     BULK_BIO = "bulk:bio"
-    BULK_USERNAME = "bulk:username"
+    BULK_REMOVE_USERNAME = "bulk:rm_username"
     BULK_PHOTO = "bulk:photo"
     BULK_REMOVE_PHOTO = "bulk:rm_photo"
     BULK_CLEAN_DMS = "bulk:clean_dms"

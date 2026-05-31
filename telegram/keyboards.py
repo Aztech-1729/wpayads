@@ -156,7 +156,7 @@ def bulk_manager_keyboard() -> list[list[Button]]:
             Button.inline(_b("📄 Change Bio"), CB.BULK_BIO, style="primary"),
         ],
         [
-            Button.inline(_b("👤 Change Username"), CB.BULK_USERNAME, style="primary"),
+            Button.inline(_b("🚫 Remove Usernames"), CB.BULK_REMOVE_USERNAME, style="danger"),
         ],
         [
             Button.inline(_b("🖼 Change Photo"), CB.BULK_PHOTO, style="primary"),

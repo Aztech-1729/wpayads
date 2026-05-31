@@ -106,14 +106,10 @@ async def bulk_update_profile(owner_id: int, first_name: str | None = None, last
     return await _execute_bulk(owner_id, _action, progress_callback)
 
 
-async def bulk_update_username(owner_id: int, username: str, progress_callback=None) -> tuple[int, int]:
-    """Bulk update username (Note: Usernames must be unique, so we append a random number or counter)."""
+async def bulk_remove_usernames(owner_id: int, progress_callback=None) -> tuple[int, int]:
+    """Bulk remove usernames."""
     async def _action(client, acc):
-        import random
-        import string
-        suffix = ''.join(random.choices(string.digits, k=4))
-        unique_username = f"{username}{suffix}"
-        await client(UpdateUsernameRequest(username=unique_username))
+        await client(UpdateUsernameRequest(username=""))
 
     return await _execute_bulk(owner_id, _action, progress_callback)
 
@@ -154,7 +150,7 @@ async def bulk_clean_dms(owner_id: int, progress_callback=None) -> tuple[int, in
         async for dialog in client.iter_dialogs():
             if dialog.is_user and not dialog.entity.bot:
                 try:
-                    await client(DeleteHistoryRequest(peer=dialog.input_entity, max_id=0, just_clear=False, revoke=True))
+                    await client.delete_dialog(dialog.entity, revoke=True)
                 except Exception:
                     pass # Ignore errors for individual chats
 

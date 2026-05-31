@@ -276,12 +276,12 @@ def _register_handlers(bot: TelegramClient) -> None:
                 await _handle_cmp_int_round(event, awaiting.split(":")[1])
             elif awaiting.startswith("cmp_rounds_max:"):
                 await _handle_cmp_rounds_max(event, awaiting.split(":")[1])
-            elif awaiting == "bulk_name":
-                await _handle_bulk_name(event)
+            elif awaiting == "bulk_name_first":
+                await _handle_bulk_name_first(event)
+            elif awaiting == "bulk_name_last":
+                await _handle_bulk_name_last(event)
             elif awaiting == "bulk_bio":
                 await _handle_bulk_bio(event)
-            elif awaiting == "bulk_username":
-                await _handle_bulk_username(event)
             elif awaiting == "bulk_photo":
                 await _handle_bulk_photo(event)
             elif awaiting == "bulk_2fa_set":
@@ -618,23 +618,47 @@ async def _handle_cmp_rounds_max(event, campaign_id: str):
         await event.respond("❌ Invalid number. Try again.")
 
 
-async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
+async def _handle_bulk_name_first(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
-    from telegram.menus import render_bulk_progress
-    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
-    msg = await event.respond(render_bulk_progress("Change Name", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
-    from services import bulk_service
     
     if "{rand}" in text:
         import random, string
         text = text.replace("{rand}", "".join(random.choices(string.digits, k=4)))
+        
+    await set_context(event.sender_id, "bulk_first_name", text)
+    await set_context(event.sender_id, "awaiting_input", "bulk_name_last")
+    from telegram.keyboards import back_keyboard
+    from core.constants import CB
+    await event.respond(
+        f"✅ First name set to: <b>{text}</b>\n\n"
+        f"Now, please send the <b>new Last Name</b> for all accounts.\n"
+        f"<i>(Send a dot `.` or space to leave it blank)</i>", 
+        buttons=back_keyboard(CB.BULK_MANAGER), parse_mode="html"
+    )
+
+async def _handle_bulk_name_last(event: events.NewMessage.Event) -> None:
+    last_name = event.text.strip()
+    
+    if "{rand}" in last_name:
+        import random, string
+        last_name = last_name.replace("{rand}", "".join(random.choices(string.digits, k=4)))
+        
+    if last_name == "." or not last_name:
+        last_name = ""
+        
+    first_name = await get_context(event.sender_id, "bulk_first_name")
+    
+    from telegram.menus import render_bulk_progress
+    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+    msg = await event.respond(render_bulk_progress("Change Name", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
+    from services import bulk_service
         
     async def run_task():
         async def update_progress(success, failed, total):
             try:
                 await msg.edit(render_bulk_progress("Change Name", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
             except Exception: pass
-        success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=text, progress_callback=update_progress)
+        success, failed = await bulk_service.bulk_update_profile(event.sender_id, first_name=first_name, last_name=last_name, progress_callback=update_progress)
         try:
             await msg.edit(render_bulk_progress("Change Name", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
         except Exception: pass
@@ -645,6 +669,10 @@ async def _handle_bulk_name(event: events.NewMessage.Event) -> None:
 
 async def _handle_bulk_bio(event: events.NewMessage.Event) -> None:
     text = event.text.strip()
+    if len(text) > 70:
+        await event.respond("❌ <b>Bio too long!</b>\nTelegram only allows a maximum of 70 characters.\n\nPlease send a shorter one.", parse_mode="html")
+        return
+        
     from telegram.menus import render_bulk_progress
     from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
     msg = await event.respond(render_bulk_progress("Change Bio", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
@@ -658,27 +686,6 @@ async def _handle_bulk_bio(event: events.NewMessage.Event) -> None:
         success, failed = await bulk_service.bulk_update_profile(event.sender_id, about=text, progress_callback=update_progress)
         try:
             await msg.edit(render_bulk_progress("Change Bio", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
-        except Exception: pass
-
-    import asyncio
-    asyncio.create_task(run_task())
-    await set_context(event.sender_id, "awaiting_input", None)
-
-async def _handle_bulk_username(event: events.NewMessage.Event) -> None:
-    text = event.text.strip()
-    from telegram.menus import render_bulk_progress
-    from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
-    msg = await event.respond(render_bulk_progress("Change Username", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
-    from services import bulk_service
-    
-    async def run_task():
-        async def update_progress(success, failed, total):
-            try:
-                await msg.edit(render_bulk_progress("Change Username", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
-            except Exception: pass
-        success, failed = await bulk_service.bulk_update_username(event.sender_id, text, progress_callback=update_progress)
-        try:
-            await msg.edit(render_bulk_progress("Change Username", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
         except Exception: pass
 
     import asyncio
