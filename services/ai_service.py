@@ -10,7 +10,7 @@ from openai import OpenAI
 import os
 
 from core.config import get_settings
-from core.database import redis_db
+from cache.redis_client import cache_get, cache_set, make_key
 from core.constants import RedisKeys
 from services.ai_tools import TOOLS, TOOL_REGISTRY
 
@@ -29,14 +29,12 @@ def get_ai_client() -> Optional[OpenAI]:
     return None
 
 async def _get_chat_history(user_id: int) -> List[Dict[str, Any]]:
-    key = RedisKeys.AI_CHAT_HISTORY.format(user_id=user_id)
-    history_json = await redis_db.get(key)
-    if history_json:
-        return json.loads(history_json)
-    return []
+    key = make_key(RedisKeys.AI_CHAT_HISTORY, user_id=user_id)
+    history = await cache_get(key)
+    return history if history else []
 
 async def _save_chat_history(user_id: int, history: List[Dict[str, Any]]) -> None:
-    key = RedisKeys.AI_CHAT_HISTORY.format(user_id=user_id)
+    key = make_key(RedisKeys.AI_CHAT_HISTORY, user_id=user_id)
     # Keep only last 20 messages to save context limit
     if len(history) > 20:
         # Keep system prompt if present
@@ -44,7 +42,7 @@ async def _save_chat_history(user_id: int, history: List[Dict[str, Any]]) -> Non
             history = [history[0]] + history[-19:]
         else:
             history = history[-20:]
-    await redis_db.set(key, json.dumps(history), ex=86400 * 7) # expire in 7 days
+    await cache_set(key, history, ttl=86400 * 7) # expire in 7 days
 
 async def chat_with_ai(user_id: int, user_message: str) -> str:
     """
