@@ -102,6 +102,10 @@ class RedisKeys:
     # User State
     USER_STATE = "state:{user_id}"
     USER_SESSION = "session:{user_id}"
+    
+    # AI State
+    AI_CHAT_HISTORY = "ai:history:{user_id}"
+    AI_ACTION_QUEUE = "ai:queue:{action_id}"
 
     # Runtime
     FLOOD_LOCK = "flood:{account_id}"
@@ -168,6 +172,11 @@ class CB:
     GROUPS_TOGGLE = "groups:toggle:{account_id}:{group_id}:{page}"
     GROUPS_SELECT_ALL = "groups:all:{account_id}:{page}"
     AUTO_JOIN = "groups:autojoin"
+
+    # AI
+    AI_CHAT = "ai:chat"
+    AI_CONFIRM = "ai:confirm:{action_id}"
+    AI_CANCEL = "ai:cancel:{action_id}"
 
     # Navigation
     BACK = "back"

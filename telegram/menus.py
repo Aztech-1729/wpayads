@@ -528,4 +528,27 @@ def render_autoreply_view(text: str) -> str:
         f"<code>{text}</code>"
     )
 
+# ── 9. PERSONAL AI ──────────────────────────────────────────
+
+def render_ai_welcome() -> str:
+    """Render the AI welcome screen."""
+    return (
+        "🤖 <b>PERSONAL AI ASSISTANT</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Hello! I am your intelligent agent.\n\n"
+        "I can fetch live statistics, diagnose campaign issues, or securely perform actions for you.\n\n"
+        "<b>What would you like me to do?</b>\n"
+        "<i>(Just type your message below)</i>"
+    )
+
+def render_ai_action(description: str) -> str:
+    """Render the AI Action confirmation prompt."""
+    return (
+        "⚠️ <b>AI ACTION PROPOSED</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "The AI has proposed the following action:\n\n"
+        f"👉 <b>{description}</b>\n\n"
+        "<i>Do you want to authorize this action?</i>"
+    )
+
 

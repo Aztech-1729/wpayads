@@ -52,6 +52,9 @@ def main_menu_keyboard() -> list[list[Button]]:
             Button.inline(_b("💬 Auto Reply"), CB.SETTINGS_AUTOREPLY, style="primary"),
             Button.inline(_b("🤖 Auto Join"), CB.AUTO_JOIN, style="primary"),
         ],
+        [
+            Button.inline(_b("🧠 Personal AI"), CB.AI_CHAT, style="primary"),
+        ],
     ]
 
 
@@ -443,6 +446,30 @@ def analytics_keyboard() -> list[list[Button]]:
     return [
         [Button.inline(_b("🔄 Refresh"), CB.ANALYTICS, style="primary")],
         [Button.inline(_b("← Back"), CB.DASHBOARD, style="danger")],
+    ]
+
+def autoreply_view_keyboard() -> list[list[Button]]:
+    """Auto Reply View Keyboard."""
+    return [
+        [Button.inline(_b("❌ Delete Custom Message"), CB.SETTINGS_AUTOREPLY_CUSTOM, style="danger")],
+        [Button.inline(_b("← Back"), CB.SETTINGS_AUTOREPLY, style="danger")],
+    ]
+
+# ── 9. PERSONAL AI ──────────────────────────────────────────
+
+def ai_chat_keyboard() -> list[list[Button]]:
+    """Keyboard for when user is in AI chat mode."""
+    return [
+        [Button.inline(_b("❌ Exit AI Chat"), CB.DASHBOARD, style="danger")]
+    ]
+
+def ai_action_keyboard(action_id: str) -> list[list[Button]]:
+    """Keyboard for confirming or cancelling an AI action."""
+    return [
+        [
+            Button.inline(_b("✅ Confirm"), CB.AI_CONFIRM.format(action_id=action_id), style="success"),
+            Button.inline(_b("❌ Cancel"), CB.AI_CANCEL.format(action_id=action_id), style="danger"),
+        ]
     ]
 
 

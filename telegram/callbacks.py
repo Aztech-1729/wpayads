@@ -664,6 +664,63 @@ async def on_health_view_all(event: events.CallbackQuery.Event, page: int = 1) -
     await event.edit(text, buttons=buttons, parse_mode="html")
 
 
+# ── 9. PERSONAL AI ───────────────────────────────────────────
+
+async def on_ai_chat(event: events.CallbackQuery.Event) -> None:
+    """Enter AI chat mode."""
+    await event.answer()
+    text = menus.render_ai_welcome()
+    buttons = keyboards.ai_chat_keyboard()
+    await event.edit(text, buttons=buttons, parse_mode="html")
+    await set_context(event.sender_id, "awaiting_input", "ai_chat")
+
+async def on_ai_confirm(event: events.CallbackQuery.Event, action_id: str) -> None:
+    """Execute a pending AI action."""
+    await event.answer()
+    
+    from services.ai_action_queue import get_action, clear_action
+    action = await get_action(action_id)
+    
+    if not action:
+        await event.edit("⚠️ Action expired or not found.", buttons=keyboards.back_keyboard())
+        return
+        
+    if action.get("user_id") != event.sender_id:
+        await event.answer("⚠️ Unauthorized.", alert=True)
+        return
+        
+    action_type = action.get("action_type")
+    payload = action.get("payload", {})
+    
+    await event.edit("⏳ <b>Executing...</b>", parse_mode="html")
+    
+    # Route execution based on action_type
+    try:
+        if action_type == "delete_account":
+            account_id = payload.get("account_id")
+            if account_id:
+                from repositories.accounts_repo import accounts_repo
+                await accounts_repo.delete(account_id)
+                await event.edit("✅ Account deleted successfully.", buttons=keyboards.back_keyboard())
+        else:
+            await event.edit(f"⚠️ Unknown action type: {action_type}", buttons=keyboards.back_keyboard())
+    except Exception as e:
+        await event.edit(f"⚠️ Execution failed: {str(e)}", buttons=keyboards.back_keyboard())
+    finally:
+        await clear_action(action_id)
+
+
+async def on_ai_cancel(event: events.CallbackQuery.Event, action_id: str) -> None:
+    """Cancel a pending AI action."""
+    await event.answer("Action cancelled.")
+    from services.ai_action_queue import clear_action
+    await clear_action(action_id)
+    
+    text = menus.render_ai_welcome()
+    buttons = keyboards.ai_chat_keyboard()
+    await event.edit(text, buttons=buttons, parse_mode="html")
+
+
 # ── Auto Join ──────────────────────────────────────────────────
 
 
@@ -1153,6 +1210,7 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
         CB.SETTINGS_AUTOREPLY_CUSTOM: on_autoreply_custom,
         CB.AUTO_JOIN: on_groups_autojoin,
         "groups:autojoin:cancel": on_groups_autojoin_cancel,
+        CB.AI_CHAT: on_ai_chat,
     }
 
     handler = simple_handlers.get(data)
@@ -1160,8 +1218,13 @@ async def route_callback(event: events.CallbackQuery.Event) -> None:
         await handler(event)
         return
 
-    # Parameterized callbacks
-    if data.startswith("acc:view:"):
+    elif data.startswith("ai:confirm:"):
+        action_id = data.split(":", 2)[2]
+        await on_ai_confirm(event, action_id)
+    elif data.startswith("ai:cancel:"):
+        action_id = data.split(":", 2)[2]
+        await on_ai_cancel(event, action_id)
+    elif data.startswith("acc:view:"):
         account_id = data.split(":", 2)[2]
         await on_account_view(event, account_id)
     elif data.startswith("acc:del:"):

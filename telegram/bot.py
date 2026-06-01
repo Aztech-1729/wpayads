@@ -206,6 +206,33 @@ def _register_handlers(bot: TelegramClient) -> None:
         if not awaiting:
             return
 
+        if awaiting == "ai_chat" and event.text:
+            from services.ai_service import chat_with_ai
+            from telegram import menus, keyboards
+            
+            # Show typing...
+            msg = await event.respond("⏳ <i>Thinking...</i>", parse_mode="html")
+            
+            # Call AI
+            response = await chat_with_ai(user_id, event.text)
+            
+            # Check if AI proposed an action
+            if isinstance(response, str) and response.startswith("{") and "_action_request" in response:
+                from services.ai_action_queue import enqueue_action
+                action_id = await enqueue_action(user_id, response)
+                if action_id:
+                    action_data = __import__('json').loads(response)
+                    text = menus.render_ai_action(action_data.get("description", "Unknown Action"))
+                    await msg.edit(text, buttons=keyboards.ai_action_keyboard(action_id), parse_mode="html")
+                else:
+                    await msg.edit("⚠️ Failed to enqueue action.", parse_mode="html")
+            else:
+                # Normal chat response
+                text = f"🤖 <b>AI:</b>\n\n{response}"
+                await msg.edit(text, buttons=keyboards.ai_chat_keyboard(), parse_mode="html")
+                
+            return
+
         if awaiting == "bulk_autojoin":
             from services import group_worker
             

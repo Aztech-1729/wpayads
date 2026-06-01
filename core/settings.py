@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     session_encryption_key: str  # base64-encoded 32-byte AES key
 
 
+    # ── AI Configuration ────────────────────────────────────
+    ai_provider: str = "openai"
+    ai_api_key: Optional[str] = None
+    ai_base_url: Optional[str] = None
 
     # ── Pagination ──────────────────────────────────────────
     default_page_size: int = 20
