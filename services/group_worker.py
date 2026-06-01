@@ -1,0 +1,137 @@
+"""
+Group worker — handles folder actions and bulk joining logic.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Callable, Coroutine, List
+
+from telethon import functions, types
+from core.logging import get_logger
+from repositories import accounts_repo
+from telegram.client_pool import client_pool
+from services.joiner_service import start_auto_join
+
+log = get_logger("group_worker")
+
+async def bulk_remove_folders(user_id: int, progress_callback: Callable[[int, int, int], Coroutine]) -> tuple[int, int]:
+    """
+    Remove all custom dialog filters (chat folders) from all accounts.
+    """
+    accounts = await accounts_repo.get_all_for_owner(user_id)
+    if not accounts:
+        return 0, 0
+        
+    total_accounts = len(accounts)
+    success = 0
+    failed = 0
+    
+    await progress_callback(0, 0, total_accounts)
+    
+    for account in accounts:
+        client = await client_pool.get_client(account.id)
+        if not client or not client.is_connected():
+            failed += 1
+            await progress_callback(success, failed, total_accounts)
+            continue
+            
+        try:
+            # Fetch all existing dialog filters
+            filters = await client(functions.messages.GetDialogFiltersRequest())
+            
+            # Delete all custom filters
+            for f in filters:
+                if f.id == 0:
+                    continue  # 0 is usually "All Chats" default filter
+                await client(functions.messages.UpdateDialogFilterRequest(
+                    id=f.id,
+                    filter=None  # Setting to None deletes the folder
+                ))
+                
+            success += 1
+        except Exception as e:
+            log.warning("rm_folders_failed", account_id=account.id, error=str(e))
+            failed += 1
+            
+        await progress_callback(success, failed, total_accounts)
+        
+    return success, failed
+
+
+async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[[str], Coroutine]) -> None:
+    """
+    Instantly join a chat folder for all connected accounts, then delete the folder.
+    """
+    accounts = await accounts_repo.get_all_for_owner(user_id)
+    if not accounts:
+        await progress_callback("❌ No accounts connected.")
+        return
+        
+    total_accounts = len(accounts)
+    success = 0
+    failed = 0
+    
+    await progress_callback(f"⏳ <b>Joining folder on {total_accounts} accounts...</b>")
+    
+    for account in accounts:
+        client = await client_pool.get_client(account.id)
+        if not client or not client.is_connected():
+            failed += 1
+            await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
+            continue
+            
+        try:
+            # 1. Check the invite link to get the peers
+            invite = await client(functions.chatlists.CheckChatlistInviteRequest(slug=slug))
+            
+            # 2. Join the chatlist if not already joined
+            if not isinstance(invite, types.chatlists.ChatlistInviteAlready):
+                peers_to_join = getattr(invite, 'peers', [])
+                if peers_to_join:
+                    # Instantly join all groups in the folder
+                    await client(functions.chatlists.JoinChatlistInviteRequest(
+                        slug=slug,
+                        peers=peers_to_join
+                    ))
+            
+            # 3. Clean up the folder interface immediately
+            filters = await client(functions.messages.GetDialogFiltersRequest())
+            for f in filters:
+                if f.id == 0: continue
+                await client(functions.messages.UpdateDialogFilterRequest(id=f.id, filter=None))
+                
+            success += 1
+        except Exception as e:
+            log.warning("bulk_join_folder_failed", account_id=account.id, error=str(e))
+            failed += 1
+            
+        await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
+        
+    await progress_callback(f"✅ <b>Folder joined completely!</b>\n\nAccounts Succeeded: {success}\nAccounts Failed: {failed}")
+
+
+async def bulk_join_links(user_id: int, links: List[str], progress_callback: Callable[[str], Coroutine]) -> None:
+    """
+    Wrapper for joining links via txt file using the existing auto-join service.
+    """
+    accounts = await accounts_repo.get_all_for_owner(user_id)
+    if not accounts:
+        await progress_callback("❌ No accounts connected.")
+        return
+        
+    total_joins = len(accounts) * len(links)
+    
+    async def legacy_callback(joined: int, failed: int, total: int, status: str = "Processing") -> None:
+        text = (
+            f"📥 <b>AUTO JOIN (TXT)</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"⏳ <b>Status: {status}</b>\n\n"
+            f"✅ <b>Joined: {joined}</b>\n"
+            f"❌ <b>Failed: {failed}</b>\n"
+            f"📊 <b>Total Target: {total_joins}</b>"
+        )
+        await progress_callback(text)
+
+    await start_auto_join(user_id, links, legacy_callback)
+

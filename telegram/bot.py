@@ -250,6 +250,59 @@ def _register_handlers(bot: TelegramClient) -> None:
         if not awaiting:
             return
 
+        if awaiting == "bulk_autojoin":
+            from services import group_worker
+            
+            # Handle Folder Link
+            if event.text and "t.me/addlist/" in event.text:
+                slug = event.text.strip().split("t.me/addlist/")[-1].split("?")[0].strip()
+                await set_context(user_id, "awaiting_input", None)
+                
+                msg = await event.respond("⏳ <b>Processing Folder Link...</b>", parse_mode="html")
+                
+                async def update_progress(text: str):
+                    try:
+                        await msg.edit(text, parse_mode="html")
+                    except: pass
+                
+                import asyncio
+                asyncio.create_task(group_worker.bulk_join_folder(user_id, slug, update_progress))
+                return
+            
+            # Handle TXT File
+            elif event.document:
+                filename = event.document.attributes[0].file_name if event.document.attributes else ""
+                if not filename.lower().endswith(".txt"):
+                    await event.respond("❌ Please send a <b>.txt</b> file.", parse_mode="html")
+                    return
+                
+                file_bytes = await event.download_media(bytes)
+                try:
+                    content = file_bytes.decode("utf-8")
+                    links = [line.strip() for line in content.split("\n") if line.strip()]
+                except:
+                    await event.respond("❌ Invalid file encoding. Must be UTF-8 txt.")
+                    return
+                
+                if not links:
+                    await event.respond("❌ No links found in the file.")
+                    return
+                    
+                await set_context(user_id, "awaiting_input", None)
+                msg = await event.respond(f"⏳ <b>Processing {len(links)} links from file...</b>", parse_mode="html")
+                
+                async def update_progress(text: str):
+                    try:
+                        await msg.edit(text, parse_mode="html")
+                    except: pass
+                
+                import asyncio
+                asyncio.create_task(group_worker.bulk_join_links(user_id, links, update_progress))
+                return
+            else:
+                await event.respond("❌ Please send a <b>.txt file</b> or a <b>t.me/addlist/</b> link.", parse_mode="html")
+                return
+
         # Interactive Handlers (Phone, OTP, etc.)
         try:
             if awaiting == "auth_phone":

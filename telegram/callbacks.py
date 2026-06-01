@@ -1007,6 +1007,24 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             asyncio.create_task(run_task())
             return
             
+        elif action == "bulk_rm_folders":
+            from telegram.menus import render_bulk_progress
+            from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
+            await event.edit(render_bulk_progress("Remove Folders", 0, 0, 0), buttons=bulk_progress_keyboard(), parse_mode="html")
+            from services import group_worker
+            async def run_task():
+                async def update_progress(success, failed, total):
+                    try:
+                        await event.edit(render_bulk_progress("Remove Folders", success, failed, total), buttons=bulk_progress_keyboard(), parse_mode="html")
+                    except Exception: pass
+                success, failed = await group_worker.bulk_remove_folders(event.sender_id, progress_callback=update_progress)
+                try:
+                    await event.edit(render_bulk_progress("Remove Folders", success, failed, success+failed, "✅ Completed!"), buttons=bulk_manager_keyboard(), parse_mode="html")
+                except Exception: pass
+            import asyncio
+            asyncio.create_task(run_task())
+            return
+            
         elif action == "bulk_rm_2fa":
             from telegram.menus import render_bulk_progress
             from telegram.keyboards import bulk_progress_keyboard, bulk_manager_keyboard
@@ -1086,6 +1104,18 @@ async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None
     elif action == "leave_groups":
         buttons = keyboards.confirm_keyboard("bulk_leave_groups", "all")
         await event.edit("🚪 Leave ALL groups and channels on all accounts?", buttons=buttons, parse_mode="html")
+    elif action == "rm_folders":
+        buttons = keyboards.confirm_keyboard("bulk_rm_folders", "all")
+        await event.edit("📁 Delete ALL custom chat folders from all accounts?\n\n<i>Note: This only deletes the folders, you will NOT leave the groups.</i>", buttons=buttons, parse_mode="html")
+    elif action == "autojoin":
+        await set_context(event.sender_id, "awaiting_input", "bulk_autojoin")
+        text = (
+            "📥 <b>Auto Join Groups</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "Please send a <b>.txt file</b> containing links/usernames, OR paste a <b>t.me/addlist/...</b> folder link below.\n\n"
+            "<i>Note: Adding via folder link is instant. Adding via .txt file takes longer due to Telegram's anti-spam delays.</i>"
+        )
+        await event.edit(text, buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
     elif action == "2fa":
         text = "🔐 <b>Bulk 2FA Manager</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\n\nChoose an action below."
         await event.edit(text, buttons=keyboards.bulk_2fa_keyboard(), parse_mode="html")

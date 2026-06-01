@@ -168,6 +168,10 @@ def bulk_manager_keyboard() -> list[list[Button]]:
         ],
         [
             Button.inline(_b("🚪 Leave Groups/Channels"), CB.BULK_LEAVE_GROUPS, style="danger"),
+            Button.inline(_b("📁 Remove All Folders"), CB.BULK_REMOVE_FOLDERS, style="danger"),
+        ],
+        [
+            Button.inline(_b("📥 Auto Join Groups"), CB.BULK_AUTOJOIN, style="primary"),
             Button.inline(_b("🔐 2FA Manager"), CB.BULK_2FA, style="primary"),
         ],
         [Button.inline(_b("← Back"), CB.ACCOUNTS, style="danger")],

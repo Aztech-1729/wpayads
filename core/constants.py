@@ -196,6 +196,8 @@ class CB:
     BULK_CLEAN_DMS = "bulk:clean_dms"
     BULK_ARCHIVE = "bulk:archive"
     BULK_LEAVE_GROUPS = "bulk:leave_groups"
+    BULK_REMOVE_FOLDERS = "bulk:rm_folders"
+    BULK_AUTOJOIN = "bulk:autojoin"
     BULK_2FA = "bulk:2fa"
     BULK_2FA_SET = "bulk:2fa:set"
     BULK_2FA_REMOVE = "bulk:2fa:remove"
