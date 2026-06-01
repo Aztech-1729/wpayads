@@ -90,7 +90,7 @@ async def execute_get_campaigns_summary(user_id: int, kwargs: dict) -> str:
         summary.append({
             "name": c.name,
             "status": c.status,
-            "target_groups": len(c.target_groups),
+            "target_groups": len(c.group_ids),
             "accounts_used": len(c.account_ids),
             "total_sent": c.stats.total_sent if hasattr(c, 'stats') else 0,
             "total_success": c.stats.total_success if hasattr(c, 'stats') else 0,
