@@ -1107,16 +1107,7 @@ async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None
     elif action == "rm_folders":
         buttons = keyboards.confirm_keyboard("bulk_rm_folders", "all")
         await event.edit("📁 Delete ALL custom chat folders from all accounts?\n\n<i>Note: This only deletes the folders, you will NOT leave the groups.</i>", buttons=buttons, parse_mode="html")
-    elif action == "autojoin":
-        await set_context(event.sender_id, "awaiting_input", "bulk_autojoin")
-        text = (
-            "📥 <b>Auto Join Groups</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "👇 <b>No buttons needed! Just do ONE of the following right here in the chat:</b>\n\n"
-            "📁 <b>Option 1:</b> Paste your <code>t.me/addlist/...</code> folder link (Instant Join)\n"
-            "📄 <b>Option 2:</b> Upload a <code>.txt</code> file containing group links (Slower Join)"
-        )
-        await event.edit(text, buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
+
     elif action == "2fa":
         text = "🔐 <b>Bulk 2FA Manager</b>\n━━━━━━━━━━━━━━━━━━━━━━━━\n\nChoose an action below."
         await event.edit(text, buttons=keyboards.bulk_2fa_keyboard(), parse_mode="html")
