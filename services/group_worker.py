@@ -30,26 +30,26 @@ async def bulk_remove_folders(user_id: int, progress_callback: Callable[[int, in
     await progress_callback(0, 0, total_accounts)
     
     for account in accounts:
-        client = await client_pool.get_client(account.id)
-        if not client or not client.is_connected():
-            failed += 1
-            await progress_callback(success, failed, total_accounts)
-            continue
-            
         try:
-            # Fetch all existing dialog filters
-            filters = await client(functions.messages.GetDialogFiltersRequest())
-            
-            # Delete all custom filters
-            for f in filters:
-                if f.id == 0:
-                    continue  # 0 is usually "All Chats" default filter
-                await client(functions.messages.UpdateDialogFilterRequest(
-                    id=f.id,
-                    filter=None  # Setting to None deletes the folder
-                ))
+            async with client_pool.acquire(account.id) as client:
+                if not client or not client.is_connected():
+                    failed += 1
+                    await progress_callback(success, failed, total_accounts)
+                    continue
                 
-            success += 1
+                # Fetch all existing dialog filters
+                filters = await client(functions.messages.GetDialogFiltersRequest())
+                
+                # Delete all custom filters
+                for f in filters:
+                    if f.id == 0:
+                        continue  # 0 is usually "All Chats" default filter
+                    await client(functions.messages.UpdateDialogFilterRequest(
+                        id=f.id,
+                        filter=None  # Setting to None deletes the folder
+                    ))
+                    
+                success += 1
         except Exception as e:
             log.warning("rm_folders_failed", account_id=account.id, error=str(e))
             failed += 1
@@ -75,33 +75,33 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
     await progress_callback(f"⏳ <b>Joining folder on {total_accounts} accounts...</b>")
     
     for account in accounts:
-        client = await client_pool.get_client(account.id)
-        if not client or not client.is_connected():
-            failed += 1
-            await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
-            continue
-            
         try:
-            # 1. Check the invite link to get the peers
-            invite = await client(functions.chatlists.CheckChatlistInviteRequest(slug=slug))
-            
-            # 2. Join the chatlist if not already joined
-            if not isinstance(invite, types.chatlists.ChatlistInviteAlready):
-                peers_to_join = getattr(invite, 'peers', [])
-                if peers_to_join:
-                    # Instantly join all groups in the folder
-                    await client(functions.chatlists.JoinChatlistInviteRequest(
-                        slug=slug,
-                        peers=peers_to_join
-                    ))
-            
-            # 3. Clean up the folder interface immediately
-            filters = await client(functions.messages.GetDialogFiltersRequest())
-            for f in filters:
-                if f.id == 0: continue
-                await client(functions.messages.UpdateDialogFilterRequest(id=f.id, filter=None))
+            async with client_pool.acquire(account.id) as client:
+                if not client or not client.is_connected():
+                    failed += 1
+                    await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
+                    continue
                 
-            success += 1
+                # 1. Check the invite link to get the peers
+                invite = await client(functions.chatlists.CheckChatlistInviteRequest(slug=slug))
+                
+                # 2. Join the chatlist if not already joined
+                if not isinstance(invite, types.chatlists.ChatlistInviteAlready):
+                    peers_to_join = getattr(invite, 'peers', [])
+                    if peers_to_join:
+                        # Instantly join all groups in the folder
+                        await client(functions.chatlists.JoinChatlistInviteRequest(
+                            slug=slug,
+                            peers=peers_to_join
+                        ))
+                
+                # 3. Clean up the folder interface immediately
+                filters = await client(functions.messages.GetDialogFiltersRequest())
+                for f in filters:
+                    if f.id == 0: continue
+                    await client(functions.messages.UpdateDialogFilterRequest(id=f.id, filter=None))
+                    
+                success += 1
         except Exception as e:
             log.warning("bulk_join_folder_failed", account_id=account.id, error=str(e))
             failed += 1
