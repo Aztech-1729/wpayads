@@ -38,10 +38,10 @@ async def bulk_remove_folders(user_id: int, progress_callback: Callable[[int, in
                     continue
                 
                 # Fetch all existing dialog filters
-                filters = await client(functions.messages.GetDialogFiltersRequest())
+                result = await client(functions.messages.GetDialogFiltersRequest())
                 
                 # Delete all custom filters
-                for f in filters:
+                for f in result.filters:
                     if f.id == 0:
                         continue  # 0 is usually "All Chats" default filter
                     await client(functions.messages.UpdateDialogFilterRequest(
@@ -96,8 +96,8 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
                         ))
                 
                 # 3. Clean up the folder interface immediately
-                filters = await client(functions.messages.GetDialogFiltersRequest())
-                for f in filters:
+                result = await client(functions.messages.GetDialogFiltersRequest())
+                for f in result.filters:
                     if f.id == 0: continue
                     await client(functions.messages.UpdateDialogFilterRequest(id=f.id, filter=None))
                     
