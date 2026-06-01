@@ -55,16 +55,20 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
         
     history = await _get_chat_history(user_id)
     
-    # System prompt
+    # System prompt - always ensure the latest agent.md is used
+    system_content = "You are the WPAY ADS Personal AI Assistant."
+    try:
+        with open("agent.md", "r", encoding="utf-8") as f:
+            system_content = f.read()
+    except Exception:
+        pass
+        
     if not history:
-        history.append({
-            "role": "system", 
-            "content": (
-                "You are the WPAY ADS Personal AI Assistant. You help the user manage their Telegram bulk marketing accounts. "
-                "You have access to tools to fetch stats and propose actions. "
-                "Keep responses concise, highly analytical, friendly, and use formatting/emojis where appropriate."
-            )
-        })
+        history.append({"role": "system", "content": system_content})
+    elif history[0]["role"] == "system":
+        history[0]["content"] = system_content
+    else:
+        history.insert(0, {"role": "system", "content": system_content})
         
     history.append({"role": "user", "content": user_message})
     
