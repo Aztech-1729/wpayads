@@ -19,7 +19,7 @@ async def bulk_remove_folders(user_id: int, progress_callback: Callable[[int, in
     """
     Remove all custom dialog filters (chat folders) from all accounts.
     """
-    accounts = await accounts_repo.get_all_for_owner(user_id)
+    accounts = await accounts_repo.list_by_owner(user_id)
     if not accounts:
         return 0, 0
         
@@ -63,7 +63,7 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
     """
     Instantly join a chat folder for all connected accounts, then delete the folder.
     """
-    accounts = await accounts_repo.get_all_for_owner(user_id)
+    accounts = await accounts_repo.list_by_owner(user_id)
     if not accounts:
         await progress_callback("❌ No accounts connected.")
         return
@@ -115,7 +115,7 @@ async def bulk_join_links(user_id: int, links: List[str], progress_callback: Cal
     """
     Wrapper for joining links via txt file using the existing auto-join service.
     """
-    accounts = await accounts_repo.get_all_for_owner(user_id)
+    accounts = await accounts_repo.list_by_owner(user_id)
     if not accounts:
         await progress_callback("❌ No accounts connected.")
         return
