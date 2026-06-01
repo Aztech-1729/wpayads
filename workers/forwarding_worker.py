@@ -201,6 +201,10 @@ async def execute_single_round(campaign) -> None:
         "total_failed": latest_camp.stats.total_failed + total_failed,
         "last_run_at": datetime.utcnow(),
     })
+    
+    # Invalidate cache so UI shows fresh stats
+    from cache import campaign_cache
+    await campaign_cache.invalidate_summary(campaign.id)
 
 
 async def forward_for_account(

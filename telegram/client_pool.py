@@ -120,9 +120,16 @@ class ClientPool:
                 slot.error_count += 1
                 await self._update_circuit(account_id, success=False)
                 
-                # Force disconnect on fatal connection/session errors so it cleanly reconnects next time
+                # Force disconnect or auto-delete on fatal connection/session errors
                 err_str = str(exc).lower()
-                if "wrong session id" in err_str or "connection" in err_str or "closed" in err_str or "unpacking" in err_str:
+                if any(x in err_str for x in ["authkey", "deactivated", "authorization key"]):
+                    try:
+                        from services import account_service
+                        asyncio.create_task(account_service.handle_unauthorized_account(account_id))
+                        await log.aerror("pool.account_revoked", account_id=account_id, error=str(exc))
+                    except Exception:
+                        pass
+                elif "wrong session id" in err_str or "connection" in err_str or "closed" in err_str or "unpacking" in err_str:
                     try:
                         await slot.client.disconnect()
                     except Exception:
