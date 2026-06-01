@@ -831,8 +831,6 @@ async def on_page_next(event: events.CallbackQuery.Event, screen: str, page: int
         await on_campaign_manage_accounts(event, campaign_id, page=page)
     elif screen == "health_all":
         await on_health_view_all(event, page=page)
-    elif screen == "groups_menu":
-        await on_groups_menu(event, page=page)
 
 
 async def on_page_prev(event: events.CallbackQuery.Event, screen: str, page: int) -> None:
