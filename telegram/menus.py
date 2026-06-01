@@ -475,17 +475,9 @@ def render_autojoin_prompt() -> str:
     return (
         "🤖 <b>AUTO JOIN GROUPS</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "This feature will automatically join groups from all your added accounts.\n\n"
-        "ℹ️ <b>INSTRUCTIONS:</b>\n"
-        "├ 1. Prepare a <b>.txt</b> file with group links.\n"
-        "├ 2. One link per line (e.g. t.me/groupname).\n"
-        "├ 3. Send the file to this bot.\n"
-        "└ 4. Only <b>Groups</b> will be joined (Channels ignored).\n\n"
-        "⚠️ <b>SAFETY LIMITS:</b>\n"
-        "├ <b>Rate:</b> ~200 groups per hour per account.\n"
-        "├ <b>Delays:</b> Random intervals between joins.\n"
-        "└ <b>Lock:</b> Campaigns are locked until finished.\n\n"
-        "Please upload your <b>.txt</b> file now."
+        "👇 <b>No buttons needed! Just do ONE of the following right here in the chat:</b>\n\n"
+        "📁 <b>Option 1:</b> Paste your <code>t.me/addlist/...</code> folder link (Instant Join)\n"
+        "📄 <b>Option 2:</b> Upload a <code>.txt</code> file containing group links (Slower Join)"
     )
 
 

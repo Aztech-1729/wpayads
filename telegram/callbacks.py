@@ -678,7 +678,7 @@ async def on_groups_autojoin(event: events.CallbackQuery.Event) -> None:
     text = menus.render_autojoin_prompt()
     buttons = keyboards.back_keyboard(CB.DASHBOARD)
     await event.edit(text, buttons=buttons, parse_mode="html")
-    await set_context(event.sender_id, "awaiting_input", "autojoin_file")
+    await set_context(event.sender_id, "awaiting_input", "bulk_autojoin")
 
 
 async def on_groups_autojoin_cancel(event: events.CallbackQuery.Event) -> None:
