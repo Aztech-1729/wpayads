@@ -699,7 +699,7 @@ async def on_ai_confirm(event: events.CallbackQuery.Event, action_id: str) -> No
         if action_type == "delete_account":
             account_id = payload.get("account_id")
             if account_id:
-                from repositories.accounts_repo import accounts_repo
+                from repositories import accounts_repo
                 await accounts_repo.delete(account_id)
                 await event.edit("✅ Account deleted successfully.", buttons=keyboards.back_keyboard())
         else:

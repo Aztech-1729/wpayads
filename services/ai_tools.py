@@ -9,8 +9,8 @@ from typing import Dict, Any, Callable, Coroutine
 from pydantic import BaseModel
 import json
 
-from repositories.accounts_repo import accounts_repo
-from repositories.campaigns_repo import campaigns_repo
+from repositories import accounts_repo
+from repositories import campaigns_repo
 
 # ── 1. Tool Schemas ──────────────────────────────────────────
 
