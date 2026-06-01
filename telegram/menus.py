@@ -295,10 +295,13 @@ def render_campaign_detail(data: dict | None) -> str:
     accounts = data.get("account_count", 0)
     groups = data.get("group_count", 0)
     created = data.get("created_at", None)
-    total_sent = data.get("total_sent", 0)
-    success = data.get("success_count", 0)
-    failed = data.get("failure_count", 0)
+    stats = data.get("stats", {})
+    total_sent = data.get("total_sent") or stats.get("total_sent", 0)
+    success = data.get("success_count") or stats.get("total_success", 0)
+    failed = data.get("failure_count") or stats.get("total_failed", 0)
+    
     rate = (success / total_sent * 100) if total_sent > 0 else 0
+    fail_rate = (failed / total_sent * 100) if total_sent > 0 else 0
 
     status_badge = {"ACTIVE": "🟢 Active", "PAUSED": "🟡 Paused", "DRAFT": "📝 Draft", "COMPLETED": "✅ Done"}.get(status, status)
 
@@ -323,7 +326,7 @@ def render_campaign_detail(data: dict | None) -> str:
         f"📈 <b>STATS:</b>\n"
         f"├ <b>Total Forwarded: {total_sent}</b>\n"
         f"├ <b>Successful: {success} ({rate:.2f}%)</b>\n"
-        f"└ <b>Failed: {failed} ({100-rate:.2f}%)</b>\n\n"
+        f"└ <b>Failed: {failed} ({fail_rate:.2f}%)</b>\n\n"
         f"⚙️ <b>SETTINGS:</b>\n"
         f"├ <b>Ad Type: {ad_disp}</b>\n"
         f"├ <b>Interval: {data.get('group_delay_seconds', 15)}s / {data.get('round_delay_seconds', 600)}s</b>\n"
