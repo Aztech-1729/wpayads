@@ -42,8 +42,8 @@ async def bulk_remove_folders(user_id: int, progress_callback: Callable[[int, in
                 
                 # Delete all custom filters
                 for f in result.filters:
-                    if not hasattr(f, 'id') or getattr(f, 'id', 0) == 0:
-                        continue  # Skip Default filter and "All Chats" filter
+                    if isinstance(f, types.DialogFilterDefault):
+                        continue  # Skip Default filter ("All Chats")
                     await client(functions.messages.UpdateDialogFilterRequest(
                         id=f.id,
                         filter=None  # Setting to None deletes the folder
@@ -98,7 +98,7 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
                 # 3. Clean up the folder interface immediately
                 result = await client(functions.messages.GetDialogFiltersRequest())
                 for f in result.filters:
-                    if not hasattr(f, 'id') or getattr(f, 'id', 0) == 0: continue
+                    if isinstance(f, types.DialogFilterDefault): continue
                     await client(functions.messages.UpdateDialogFilterRequest(id=f.id, filter=None))
                     
                 success += 1
