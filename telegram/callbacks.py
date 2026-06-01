@@ -1112,8 +1112,9 @@ async def on_bulk_action(event: events.CallbackQuery.Event, action: str) -> None
         text = (
             "📥 <b>Auto Join Groups</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "Please send a <b>.txt file</b> containing links/usernames, OR paste a <b>t.me/addlist/...</b> folder link below.\n\n"
-            "<i>Note: Adding via folder link is instant. Adding via .txt file takes longer due to Telegram's anti-spam delays.</i>"
+            "👇 <b>No buttons needed! Just do ONE of the following right here in the chat:</b>\n\n"
+            "📁 <b>Option 1:</b> Paste your <code>t.me/addlist/...</code> folder link (Instant Join)\n"
+            "📄 <b>Option 2:</b> Upload a <code>.txt</code> file containing group links (Slower Join)"
         )
         await event.edit(text, buttons=keyboards.back_keyboard(CB.BULK_MANAGER), parse_mode="html")
     elif action == "2fa":
