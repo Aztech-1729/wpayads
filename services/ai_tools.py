@@ -98,9 +98,10 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "campaign_name": {"type": "string", "description": "The exact name of the campaign"},
-                    "group_delay_seconds": {"type": "integer", "description": "The new delay interval in seconds"}
+                    "group_delay_seconds": {"type": "integer", "description": "Delay between sending to each group (e.g. 30)"},
+                    "round_delay_seconds": {"type": "integer", "description": "Delay between full campaign rounds (e.g. 600)"}
                 },
-                "required": ["campaign_name", "group_delay_seconds"]
+                "required": ["campaign_name"]
             }
         }
     },
@@ -314,7 +315,8 @@ async def execute_get_campaign_detail(user_id: int, kwargs: dict) -> str:
             "total_success": getattr(target.stats, 'total_success', 0) if hasattr(target, 'stats') else 0,
             "total_failed": getattr(target.stats, 'total_failed', 0) if hasattr(target, 'stats') else 0,
         },
-        "group_delay_seconds": target.group_delay_seconds,
+        "group_delay_seconds": getattr(target, 'group_delay_seconds', 15),
+        "round_delay_seconds": getattr(target, 'round_delay_seconds', 600),
         "created_at": target.created_at.isoformat() + "Z" if getattr(target, "created_at", None) else None,
         "last_active_at": target.last_active_at.isoformat() + "Z" if getattr(target, "last_active_at", None) else None
     }
@@ -401,7 +403,8 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
 
 async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
     name = kwargs.get("campaign_name")
-    delay = kwargs.get("group_delay_seconds")
+    g_delay = kwargs.get("group_delay_seconds")
+    r_delay = kwargs.get("round_delay_seconds")
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
     target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
@@ -409,10 +412,22 @@ async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
-    await campaigns_repo.update_fields(target.id, {"group_delay_seconds": int(delay)})
+    updates = {}
+    msgs = []
+    if g_delay is not None:
+        updates["group_delay_seconds"] = int(g_delay)
+        msgs.append(f"group delay to {g_delay}s")
+    if r_delay is not None:
+        updates["round_delay_seconds"] = int(r_delay)
+        msgs.append(f"round delay to {r_delay}s")
+        
+    if not updates:
+        return json.dumps({"error": "No delays provided to update."})
+        
+    await campaigns_repo.update_fields(target.id, updates)
     return json.dumps({
         "success": True,
-        "message": f"Campaign '{name}' interval updated to {delay}s."
+        "message": f"Campaign '{name}' updated: " + " and ".join(msgs) + "."
     })
 
 async def propose_delete_campaign(user_id: int, kwargs: dict) -> str:

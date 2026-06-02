@@ -556,29 +556,29 @@ Starts or pauses an existing campaign.
 ## 5.3 Tool: edit_campaign_interval
 
 ### Purpose
-Modifies the group_delay_seconds for an existing campaign — controls the
-cooldown between sending messages to prevent FloodWait bans.
+Modifies the delay between groups (`group_delay_seconds`) and/or the delay between full rounds (`round_delay_seconds`) for an existing campaign.
 
 ### Parameters
 ```json
 {
   "campaign_name": "string",         // Required. Exact match.
-  "group_delay_seconds": 30          // Required. Integer. Min: 5.
+  "group_delay_seconds": 30,         // Optional. Integer. Delay between messages. Min: 5.
+  "round_delay_seconds": 600         // Optional. Integer. Delay between full campaign loops.
 }
 ```
 
 ### Validation Rules
-- Values < 5: REFUSE. Return an error to the user.
-- Values 5–14: ALLOW but include a mandatory ban-risk warning in your response.
-- Values 15–30: ALLOW. Optimal range.
-- Values 31–60: ALLOW. Conservative — suitable for high-risk or recovering accounts.
-- Values > 60: ALLOW but note this significantly reduces campaign throughput.
+- At least one delay must be provided.
+- `group_delay_seconds` < 5: REFUSE. Return an error to the user.
+- `group_delay_seconds` 5–14: ALLOW but include a mandatory ban-risk warning.
+- `group_delay_seconds` 15–30: ALLOW. Optimal range.
+- `round_delay_seconds` typically defaults to 600 (10 minutes). It controls the cooldown after all accounts have cycled through all groups before starting again.
 
-### Warning Template for Low Intervals
+### Warning Template for Low Group Intervals
 <i>⚠️ Warning: An interval of <code>[N]</code> seconds is extremely aggressive.
 Telegram's FloodWait algorithm typically triggers at intervals below 15 seconds.
 This may result in account bans. Minimum recommended interval is <code>20</code>
-seconds. Your request has been queued, but proceed with caution.</i>
+seconds. Your request has been applied, but proceed with caution.</i>
 
 ### When to Call
 "Change delay of X to 30 seconds" / "Set interval on X" / "Speed up campaign X"
