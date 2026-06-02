@@ -82,55 +82,79 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
         
         message = response.choices[0].message
         
+        # Create a safe assistant dictionary preserving reasoning_content if present
+        assistant_dict = {"role": "assistant", "content": message.content}
+        reasoning = getattr(message, "reasoning_content", None)
+        if not reasoning and hasattr(message, "model_extra") and message.model_extra:
+            reasoning = message.model_extra.get("reasoning_content")
+        if reasoning:
+            assistant_dict["reasoning_content"] = reasoning
+
         # Check for tool calls
         if message.tool_calls:
+            # Add all tool calls to the assistant message
+            assistant_dict["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                } for tc in message.tool_calls
+            ]
+            history.append(assistant_dict)
+            
+            # Execute tools
             for tool_call in message.tool_calls:
                 func_name = tool_call.function.name
-                func_args = json.loads(tool_call.function.arguments)
+                try:
+                    func_args = json.loads(tool_call.function.arguments)
+                except Exception:
+                    func_args = {}
                 
                 if func_name in TOOL_REGISTRY:
-                    # Execute tool securely (user_id is injected, NEVER provided by AI)
+                    # Execute tool securely
                     tool_result = await TOOL_REGISTRY[func_name](user_id, func_args)
                     
-                    # If it's an action request, intercept and return to caller to prompt user with Action Queue
+                    # If action request, return immediately to prompt user
                     if "_action_request" in tool_result:
                         return tool_result
                         
-                    # Otherwise, it's a READ tool, feed it back to the LLM
-                    # The OpenAI API requires passing back the tool call format
-                    history.append({
-                        "role": "assistant",
-                        "content": None,
-                        "tool_calls": [
-                            {
-                                "id": tool_call.id,
-                                "type": "function",
-                                "function": {
-                                    "name": tool_call.function.name,
-                                    "arguments": tool_call.function.arguments
-                                }
-                            }
-                        ]
-                    })
                     history.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
                         "name": func_name,
-                        "content": tool_result
+                        "content": str(tool_result)
+                    })
+                else:
+                    history.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "name": func_name,
+                        "content": "Error: Tool not found."
                     })
                     
-                    # Call LLM again to get final answer
-                    final_response = client.chat.completions.create(
-                        model="deepseek-v4-flash-free",
-                        messages=history
-                    )
-                    final_message = final_response.choices[0].message
-                    history.append({"role": "assistant", "content": final_message.content})
-                    await _save_chat_history(user_id, history)
-                    return final_message.content or "Done."
+            # Call LLM again to get final answer
+            final_response = client.chat.completions.create(
+                model="deepseek-v4-flash-free",
+                messages=history
+            )
+            final_message = final_response.choices[0].message
+            final_dict = {"role": "assistant", "content": final_message.content}
+            
+            final_reasoning = getattr(final_message, "reasoning_content", None)
+            if not final_reasoning and hasattr(final_message, "model_extra") and final_message.model_extra:
+                final_reasoning = final_message.model_extra.get("reasoning_content")
+            if final_reasoning:
+                final_dict["reasoning_content"] = final_reasoning
+                
+            history.append(final_dict)
+            await _save_chat_history(user_id, history)
+            return final_message.content or "Done."
                     
         # No tool called
-        history.append({"role": "assistant", "content": message.content})
+        history.append(assistant_dict)
         await _save_chat_history(user_id, history)
         return message.content or "No response generated."
         
