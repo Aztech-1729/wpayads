@@ -90,8 +90,43 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
         if reasoning:
             assistant_dict["reasoning_content"] = reasoning
 
+        # --- DSML Fallback Parser ---
+        # Some endpoints leak DeepSeek's internal XML tool format instead of native JSON.
+        parsed_tool_calls = message.tool_calls or []
+        if not parsed_tool_calls and message.content and "DSML" in message.content and "invoke name" in message.content:
+            try:
+                import uuid
+                parts = message.content.split('<| |DSML| |invoke name="')
+                if len(parts) > 1:
+                    func_name = parts[1].split('">')[0].strip()
+                    args = {}
+                    for param_part in parts[2:]:
+                        param_name = param_part.split('">')[0].strip()
+                        param_value = param_part.split('">')[1].split('<')[0].strip()
+                        args[param_name] = param_value
+                    
+                    class MockFunction:
+                        def __init__(self, name, arguments):
+                            self.name = name
+                            self.arguments = arguments
+                    class MockToolCall:
+                        def __init__(self, id, function):
+                            self.id = id
+                            self.type = "function"
+                            self.function = function
+                            
+                    tc = MockToolCall(
+                        id=f"call_{uuid.uuid4().hex[:8]}",
+                        function=MockFunction(name=func_name, arguments=json.dumps(args))
+                    )
+                    parsed_tool_calls.append(tc)
+                    assistant_dict["content"] = None # Treat as pure tool call
+            except Exception:
+                pass
+        # ----------------------------
+
         # Check for tool calls
-        if message.tool_calls:
+        if parsed_tool_calls:
             # Add all tool calls to the assistant message
             assistant_dict["tool_calls"] = [
                 {
@@ -101,12 +136,12 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
                         "name": tc.function.name,
                         "arguments": tc.function.arguments
                     }
-                } for tc in message.tool_calls
+                } for tc in parsed_tool_calls
             ]
             history.append(assistant_dict)
             
             # Execute tools
-            for tool_call in message.tool_calls:
+            for tool_call in parsed_tool_calls:
                 func_name = tool_call.function.name
                 try:
                     func_args = json.loads(tool_call.function.arguments)
