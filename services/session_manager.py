@@ -81,12 +81,23 @@ async def import_session(owner_id: int, raw_string: str) -> Account:
             detail=str(exc),
         ) from exc
 
-    # 3. Check for duplicates
+    # 3. Check for duplicates using Telegram User ID
+    telegram_id = me.id
     phone = me.phone or "unknown"
-    if phone != "unknown":
-        existing = await accounts_repo.get_by_phone(owner_id, phone)
-        if existing:
-            raise SessionInvalidError(f"Account with phone +{phone} is already added!")
+    
+    # We must check by telegram_id to prevent duplicates even if phone is hidden
+    # Wait, we need a way to check by telegram_id. 
+    # Since we don't store telegram_id on the Account model currently (only phone),
+    # let's check all accounts for this owner and decrypt to check ID.
+    existing_accounts = await accounts_repo.list_by_owner(owner_id)
+    for acc in existing_accounts:
+        try:
+            acc_raw = decrypt_session(acc.session)
+            acc_session = StringSession(acc_raw)
+            if getattr(acc_session, "user_id", None) == telegram_id or acc_raw == raw_string:
+                raise SessionInvalidError(f"This Telegram account is already added as '{acc.name}'!")
+        except Exception:
+            pass
 
     # 4. Encrypt and persist
     encrypted = encrypt_session(raw_string)
