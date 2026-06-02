@@ -132,15 +132,20 @@ async def select_accounts(
 
     # Weighted random selection
     ids = list(eligible.keys())
-    w = list(eligible.values())
     count = min(count, len(ids))
 
-    selected = random.choices(ids, weights=w, k=count)
-    # Deduplicate while preserving order
-    seen = set()
-    result = []
-    for aid in selected:
-        if aid not in seen:
-            seen.add(aid)
-            result.append(aid)
-    return result
+    # If we are selecting all eligible accounts, just return them
+    if count == len(ids):
+        return ids
+
+    # Weighted random selection WITHOUT replacement
+    selected = []
+    current_eligible = eligible.copy()
+    for _ in range(count):
+        curr_ids = list(current_eligible.keys())
+        curr_w = list(current_eligible.values())
+        choice = random.choices(curr_ids, weights=curr_w, k=1)[0]
+        selected.append(choice)
+        del current_eligible[choice]
+        
+    return selected
