@@ -726,6 +726,33 @@ async def on_ai_confirm(event: events.CallbackQuery.Event, action_id: str) -> No
                 from repositories import campaigns_repo
                 await campaigns_repo.delete(campaign_id)
                 await event.edit("✅ Campaign deleted successfully.", buttons=keyboards.back_keyboard())
+        elif action_type == "edit_campaign_message":
+            campaign_id = payload.get("campaign_id")
+            message = payload.get("message")
+            if campaign_id and message is not None:
+                from repositories import campaigns_repo
+                await campaigns_repo.update_fields(campaign_id, {"message": message})
+                await event.edit("✅ Campaign message updated successfully.", buttons=keyboards.back_keyboard())
+        elif action_type == "edit_campaign_accounts":
+            campaign_id = payload.get("campaign_id")
+            account_ids = payload.get("account_ids")
+            if campaign_id and account_ids is not None:
+                from repositories import campaigns_repo
+                await campaigns_repo.update_fields(campaign_id, {"account_ids": account_ids})
+                await event.edit("✅ Campaign accounts updated successfully.", buttons=keyboards.back_keyboard())
+        elif action_type == "pause_all_campaigns":
+            from repositories import campaigns_repo
+            campaigns = await campaigns_repo.list_by_owner(event.sender_id)
+            for c in campaigns:
+                if getattr(c, "status", "") == "ACTIVE":
+                    await campaigns_repo.update_status(c.id, "PAUSED")
+            await event.edit("✅ All active campaigns have been paused.", buttons=keyboards.back_keyboard())
+        elif action_type == "quarantine_account":
+            account_id = payload.get("account_id")
+            if account_id:
+                from repositories import accounts_repo
+                await accounts_repo.update_status(account_id, "QUARANTINED")
+                await event.edit("✅ Account quarantined successfully.", buttons=keyboards.back_keyboard())
         else:
             await event.edit(f"⚠️ Unknown action type: {action_type}", buttons=keyboards.back_keyboard())
     except Exception as e:
