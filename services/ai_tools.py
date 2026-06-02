@@ -397,7 +397,14 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
-    await campaigns_repo.update_status(target.id, status)
+    from services import campaign_service
+    try:
+        if status == "ACTIVE":
+            await campaign_service.resume_campaign(target.id, user_id)
+        else:
+            await campaign_service.pause_campaign(target.id, user_id)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to update status: {str(e)}"})
     return json.dumps({
         "success": True,
         "message": f"Campaign '{name}' status updated to {status}."
@@ -491,10 +498,14 @@ async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
     })
 
 async def propose_pause_all_campaigns(user_id: int, kwargs: dict) -> str:
+    from services import campaign_service
     campaigns = await campaigns_repo.list_by_owner(user_id)
     for c in campaigns:
         if getattr(c, "status", "") == "ACTIVE":
-            await campaigns_repo.update_status(c.id, "PAUSED")
+            try:
+                await campaign_service.pause_campaign(c.id, user_id)
+            except Exception:
+                pass
             
     return json.dumps({
         "success": True,
