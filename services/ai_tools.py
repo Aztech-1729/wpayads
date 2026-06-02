@@ -358,12 +358,10 @@ async def propose_delete_account(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own an account with phone number {phone}."})
         
-    # Return a specific structure that the ai_service will recognize as a QUEUE request
+    await accounts_repo.delete(target.id)
     return json.dumps({
-        "_action_request": True,
-        "action_type": "delete_account",
-        "description": f"Delete account {phone}",
-        "payload": {"account_id": target.id}
+        "success": True,
+        "message": f"Account {phone} deleted successfully."
     })
 
 async def propose_create_campaign(user_id: int, kwargs: dict) -> str:
@@ -379,11 +377,10 @@ async def propose_create_campaign(user_id: int, kwargs: dict) -> str:
         "group_delay_seconds": kwargs.get("group_delay_seconds", 15)
     }
     
+    await campaigns_repo.create(payload)
     return json.dumps({
-        "_action_request": True,
-        "action_type": "create_campaign",
-        "description": f"Create campaign '{name}'",
-        "payload": payload
+        "success": True,
+        "message": f"Campaign '{name}' created successfully."
     })
 
 async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
@@ -396,11 +393,10 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
+    await campaigns_repo.update_status(target.id, status)
     return json.dumps({
-        "_action_request": True,
-        "action_type": "edit_campaign_status",
-        "description": f"Change '{name}' to {status}",
-        "payload": {"campaign_id": target.id, "status": status}
+        "success": True,
+        "message": f"Campaign '{name}' status updated to {status}."
     })
 
 async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
@@ -413,11 +409,10 @@ async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
+    await campaigns_repo.update_fields(target.id, {"group_delay_seconds": int(delay)})
     return json.dumps({
-        "_action_request": True,
-        "action_type": "edit_campaign_interval",
-        "description": f"Change '{name}' delay to {delay}s",
-        "payload": {"campaign_id": target.id, "group_delay_seconds": delay}
+        "success": True,
+        "message": f"Campaign '{name}' interval updated to {delay}s."
     })
 
 async def propose_delete_campaign(user_id: int, kwargs: dict) -> str:
@@ -429,11 +424,10 @@ async def propose_delete_campaign(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
+    await campaigns_repo.delete(target.id)
     return json.dumps({
-        "_action_request": True,
-        "action_type": "delete_campaign",
-        "description": f"Delete campaign '{name}'",
-        "payload": {"campaign_id": target.id}
+        "success": True,
+        "message": f"Campaign '{name}' deleted successfully."
     })
 
 async def propose_edit_campaign_message(user_id: int, kwargs: dict) -> str:
@@ -446,11 +440,10 @@ async def propose_edit_campaign_message(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"campaign_not_found: You do not own a campaign named '{name}'."})
         
+    await campaigns_repo.update_fields(target.id, {"message": message})
     return json.dumps({
-        "_action_request": True,
-        "action_type": "edit_campaign_message",
-        "description": f"Update message for '{name}'",
-        "payload": {"campaign_id": target.id, "message": message}
+        "success": True,
+        "message": f"Campaign '{name}' message updated successfully."
     })
 
 async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
@@ -474,19 +467,21 @@ async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
     if not account_ids:
         return json.dumps({"error": "account_not_found: None of the provided phone numbers were found."})
         
+    await campaigns_repo.update_fields(target.id, {"account_ids": account_ids})
     return json.dumps({
-        "_action_request": True,
-        "action_type": "edit_campaign_accounts",
-        "description": f"Update accounts for '{name}'",
-        "payload": {"campaign_id": target.id, "account_ids": account_ids}
+        "success": True,
+        "message": f"Campaign '{name}' accounts updated successfully."
     })
 
 async def propose_pause_all_campaigns(user_id: int, kwargs: dict) -> str:
+    campaigns = await campaigns_repo.list_by_owner(user_id)
+    for c in campaigns:
+        if getattr(c, "status", "") == "ACTIVE":
+            await campaigns_repo.update_status(c.id, "PAUSED")
+            
     return json.dumps({
-        "_action_request": True,
-        "action_type": "pause_all_campaigns",
-        "description": "Pause all active campaigns",
-        "payload": {}
+        "success": True,
+        "message": "All active campaigns have been paused."
     })
 
 async def propose_quarantine_account(user_id: int, kwargs: dict) -> str:
@@ -500,11 +495,10 @@ async def propose_quarantine_account(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"account_not_found: You do not own an account with phone number {phone}."})
         
+    await accounts_repo.update_status(target.id, "QUARANTINED")
     return json.dumps({
-        "_action_request": True,
-        "action_type": "quarantine_account",
-        "description": f"Quarantine account {phone}",
-        "payload": {"account_id": target.id}
+        "success": True,
+        "message": f"Account {phone} quarantined successfully."
     })
 
 

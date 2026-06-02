@@ -152,9 +152,7 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
                     # Execute tool securely
                     tool_result = await TOOL_REGISTRY[func_name](user_id, func_args)
                     
-                    # If action request, return immediately to prompt user
-                    if "_action_request" in tool_result:
-                        return tool_result
+                    # Removed the _action_request intercept because we now execute tools directly.
                         
                     history.append({
                         "role": "tool",
