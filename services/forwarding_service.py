@@ -39,6 +39,7 @@ async def safe_forward(
     message,
     target,
     topic_id: int | None = None,
+    access_hash: int = 0,
     retries: int = 3,
 ) -> bool:
     """
@@ -50,15 +51,34 @@ async def safe_forward(
         try:
             sent_msgs = None
             
-            # Resolve target entity to avoid "Could not find input entity" errors
+            # Resolve target entity
             if isinstance(target, (int, str)):
                 resolved = False
-                # Step 1: Try cached lookup (fast path)
-                try:
-                    target = await client.get_input_entity(target)
-                    resolved = True
-                except Exception:
-                    pass
+                
+                # Fast path: Construct InputPeer directly if we have the access hash
+                if access_hash != 0:
+                    try:
+                        from telethon.tl.types import InputPeerChannel, InputPeerChat
+                        
+                        target_id = target if isinstance(target, int) else int(target)
+                        
+                        # Telethon needs the stripped ID for InputPeerChannel
+                        if str(target_id).startswith("-100"):
+                            real_id = abs(target_id) - 1000000000000
+                            target = InputPeerChannel(real_id, access_hash)
+                        elif target_id < 0:
+                            target = InputPeerChat(abs(target_id))
+                        resolved = True
+                    except Exception:
+                        pass
+                
+                # Step 1: Try cached lookup (fast path if already in session)
+                if not resolved:
+                    try:
+                        target = await client.get_input_entity(target)
+                        resolved = True
+                    except Exception:
+                        pass
 
                 # Step 2: Try get_entity with -100 prefix for channels
                 if not resolved and isinstance(target, int) and target > 0:
@@ -76,9 +96,11 @@ async def safe_forward(
                     except Exception:
                         pass
 
-                # Step 4: Last resort — populate cache via get_dialogs
+                # Step 4: Last resort — populate cache via get_dialogs (AVOID if possible)
                 if not resolved:
                     try:
+                        # Stagger the get_dialogs so multiple workers don't flood the network concurrently
+                        await asyncio.sleep(random.uniform(0.5, 2.0))
                         await client.get_dialogs()
                         target = await client.get_input_entity(target)
                     except Exception:
@@ -310,6 +332,7 @@ async def forward_to_groups(
             message=message_obj,
             target=target,
             topic_id=topic_id,
+            access_hash=group.get("access_hash", 0),
         )
 
         if result:

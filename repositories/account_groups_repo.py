@@ -20,10 +20,14 @@ async def save_groups(account_id: str, groups: list[dict]) -> None:
         
     ops = []
     for g in groups:
+        update_doc = {"title": g["title"], "is_selected": g.get("is_selected", False)}
+        if "access_hash" in g:
+            update_doc["access_hash"] = g["access_hash"]
+            
         ops.append(
             UpdateOne(
                 {"account_id": account_id, "group_id": g["id"]},
-                {"$set": {"title": g["title"], "is_selected": g.get("is_selected", False)}},
+                {"$set": update_doc},
                 upsert=True
             )
         )
@@ -121,10 +125,16 @@ async def fetch_groups_if_missing(account_id: str) -> None:
         from telegram.client_pool import client_pool
         async with client_pool.acquire(account_id) as client:
             dialogs = await client.get_dialogs()
-            groups = [
-                {"id": d.id, "title": d.title, "is_selected": False}
-                for d in dialogs if d.is_group or d.is_channel
-            ]
+            groups = []
+            for d in dialogs:
+                if d.is_group or d.is_channel:
+                    access_hash = getattr(d.entity, "access_hash", 0) if d.entity else 0
+                    groups.append({
+                        "id": d.id, 
+                        "title": d.title, 
+                        "access_hash": access_hash,
+                        "is_selected": False
+                    })
             await save_groups(account_id, groups)
     except Exception:
         pass

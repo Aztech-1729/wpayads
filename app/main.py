@@ -38,16 +38,26 @@ async def main() -> None:
         # Run ordered startup
         await startup()
 
-        # Keep the bot running until disconnected
+        # Keep the bot running until explicitly stopped, catching network drops
         bot = get_bot()
         print("\n" + "=" * 50)
         print("  WPAY ADS BOT V2 — RUNNING 🚀")
         print("  Press Ctrl+C to stop")
         print("=" * 50 + "\n")
 
-        await bot.run_until_disconnected()
-
-    except KeyboardInterrupt:
+        while True:
+            try:
+                await bot.run_until_disconnected()
+                break  # Clean disconnect
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                err_str = str(e).lower()
+                if "connection" in err_str or "timeout" in err_str or "closed" in err_str:
+                    print(f"\n[main] Network drop detected: {e}. Reconnecting in 5s...")
+                    await asyncio.sleep(5)
+                else:
+                    raise
         print("\n[main] Keyboard interrupt received")
     except Exception as exc:
         print(f"\n[main] Fatal error: {exc}")
