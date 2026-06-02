@@ -360,6 +360,8 @@ async def propose_delete_account(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"You do not own an account with phone number {phone}."})
         
+    from telegram.client_pool import client_pool
+    await client_pool.evict(target.id)
     await accounts_repo.delete(target.id)
     return json.dumps({
         "success": True,
@@ -510,6 +512,8 @@ async def propose_quarantine_account(user_id: int, kwargs: dict) -> str:
     if not target:
         return json.dumps({"error": f"account_not_found: You do not own an account with phone number {phone}."})
         
+    from telegram.client_pool import client_pool
+    await client_pool.evict(target.id)
     await accounts_repo.update_status(target.id, "QUARANTINED")
     return json.dumps({
         "success": True,
