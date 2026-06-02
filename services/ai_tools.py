@@ -491,10 +491,32 @@ async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
     if not account_ids:
         return json.dumps({"error": "account_not_found: None of the provided phone numbers were found."})
         
-    await campaigns_repo.update_fields(target.id, {"account_ids": account_ids})
+    from repositories import account_groups_repo
+    import asyncio
+    
+    fetch_tasks = [account_groups_repo.fetch_groups_if_missing(aid) for aid in account_ids]
+    if fetch_tasks:
+        await asyncio.gather(*fetch_tasks)
+        
+    all_group_ids = []
+    for aid in account_ids:
+        group_ids = await account_groups_repo.get_all_group_ids(aid)
+        for gid in group_ids:
+            if gid not in all_group_ids:
+                all_group_ids.append(gid)
+        
+    await campaigns_repo.update_fields(target.id, {
+        "account_ids": account_ids,
+        "group_ids": all_group_ids
+    })
+    
+    # Invalidate cache so UI shows the correct groups instantly
+    from cache import campaign_cache
+    await campaign_cache.invalidate_summary(target.id)
+    
     return json.dumps({
         "success": True,
-        "message": f"Campaign '{name}' accounts updated successfully."
+        "message": f"Campaign '{name}' accounts updated and {len(all_group_ids)} groups auto-selected."
     })
 
 async def propose_pause_all_campaigns(user_id: int, kwargs: dict) -> str:

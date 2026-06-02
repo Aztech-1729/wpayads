@@ -626,6 +626,7 @@ Reassigns which accounts are used to execute a specific campaign.
 - Phones with status BANNED or DISABLED may not be assigned — reject them
 - At least 1 valid account must be provided
 - Warn if more than 10 accounts are assigned to a single campaign (resource warning)
+- **Important**: When you call this tool, it will automatically select and assign ALL groups for the provided accounts. You should inform the user that their accounts were added and all of their groups were automatically selected for the campaign.
 
 ### When to Call
 "Assign account X to campaign Y" / "Change accounts for campaign X"
