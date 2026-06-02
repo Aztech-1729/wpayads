@@ -702,6 +702,30 @@ async def on_ai_confirm(event: events.CallbackQuery.Event, action_id: str) -> No
                 from repositories import accounts_repo
                 await accounts_repo.delete(account_id)
                 await event.edit("✅ Account deleted successfully.", buttons=keyboards.back_keyboard())
+        elif action_type == "create_campaign":
+            from repositories import campaigns_repo
+            await campaigns_repo.create(payload)
+            await event.edit(f"✅ Campaign '{payload.get('name')}' created successfully.", buttons=keyboards.back_keyboard())
+        elif action_type == "edit_campaign_status":
+            campaign_id = payload.get("campaign_id")
+            status = payload.get("status")
+            if campaign_id and status:
+                from repositories import campaigns_repo
+                await campaigns_repo.update_status(campaign_id, status)
+                await event.edit(f"✅ Campaign status updated to {status}.", buttons=keyboards.back_keyboard())
+        elif action_type == "edit_campaign_interval":
+            campaign_id = payload.get("campaign_id")
+            delay = payload.get("group_delay_seconds")
+            if campaign_id and delay is not None:
+                from repositories import campaigns_repo
+                await campaigns_repo.update_fields(campaign_id, {"group_delay_seconds": int(delay)})
+                await event.edit(f"✅ Campaign interval updated to {delay}s.", buttons=keyboards.back_keyboard())
+        elif action_type == "delete_campaign":
+            campaign_id = payload.get("campaign_id")
+            if campaign_id:
+                from repositories import campaigns_repo
+                await campaigns_repo.delete(campaign_id)
+                await event.edit("✅ Campaign deleted successfully.", buttons=keyboards.back_keyboard())
         else:
             await event.edit(f"⚠️ Unknown action type: {action_type}", buttons=keyboards.back_keyboard())
     except Exception as e:
