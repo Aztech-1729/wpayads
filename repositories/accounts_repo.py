@@ -26,6 +26,7 @@ async def create(
     phone: str,
     session: str,
     name: str = "",
+    telegram_id: Optional[int] = None,
 ) -> Account:
     """Create a new account record (matches existing DB schema)."""
     now = datetime.utcnow()
@@ -34,6 +35,7 @@ async def create(
         "phone": phone,
         "name": name,
         "session": session,
+        "telegram_id": telegram_id,
         "is_forwarding": False,
         "two_fa_password": "",
         "added_at": now,
@@ -234,6 +236,21 @@ async def get_by_phone(owner_id: int, phone: str) -> Optional[Account]:
             {"owner_id": str(owner_id)}
         ],
         "phone": phone
+    })
+    if doc is None:
+        return None
+    doc["_id"] = str(doc["_id"])
+    return Account.model_validate(doc)
+
+
+async def get_by_telegram_id(owner_id: int, telegram_id: int) -> Optional[Account]:
+    """Get an account by exact telegram_id for a specific owner."""
+    doc = await _coll().find_one({
+        "$or": [
+            {"owner_id": int(owner_id)},
+            {"owner_id": str(owner_id)}
+        ],
+        "telegram_id": telegram_id
     })
     if doc is None:
         return None

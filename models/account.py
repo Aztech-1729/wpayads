@@ -37,6 +37,7 @@ class Account(BaseModel):
     two_fa_password: str = ""               # 2FA password if set
     added_at: datetime = Field(default_factory=datetime.utcnow)
     round_num: int = 0                      # Forwarding round counter
+    telegram_id: Optional[int] = None       # Telegram User ID
 
     # ── New fields (defaults so old docs load cleanly) ───────
     status: str = AccountStatus.ACTIVE
