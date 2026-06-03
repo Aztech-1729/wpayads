@@ -391,11 +391,19 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
     name = kwargs.get("campaign_name")
     status = kwargs.get("status")
     
+    if not name or not status:
+        return json.dumps({"error": "Both campaign_name and status are required."})
+    
     campaigns = await campaigns_repo.list_by_owner(user_id)
     target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
-        return json.dumps({"error": f"You do not own a campaign named '{name}'."})
+        available = [c.name for c in campaigns]
+        return json.dumps({"error": f"Campaign '{name}' not found. Your campaigns: {available}"})
+    
+    # Pre-check: is the campaign already in the requested state?
+    if target.status == status:
+        return json.dumps({"error": f"Campaign '{name}' is already {status}. No change needed."})
         
     from services import campaign_service
     try:
@@ -404,10 +412,17 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
         else:
             await campaign_service.pause_campaign(target.id, user_id)
     except Exception as e:
-        return json.dumps({"error": f"Failed to update status: {str(e)}"})
+        return json.dumps({"error": f"FAILED to change status: {str(e)}"})
+    
+    # Post-action verification: re-read from DB to confirm the change took effect
+    verified = await campaigns_repo.get(target.id)
+    if not verified or str(verified.status) != status:
+        actual = str(verified.status) if verified else "DELETED"
+        return json.dumps({"error": f"VERIFICATION FAILED. Campaign status is still '{actual}', NOT '{status}'. Tell the user it did NOT work."})
+    
     return json.dumps({
         "success": True,
-        "message": f"Campaign '{name}' status updated to {status}."
+        "message": f"Campaign '{name}' is now {status}. Verified in database."
     })
 
 async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:

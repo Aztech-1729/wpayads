@@ -51,42 +51,35 @@ async def _execute_bulk(owner_id: int, action_func, progress_callback=None) -> t
         except Exception:
             pass
 
-    async def _task(acc, delay: float):
-        try:
-            await asyncio.sleep(delay)
-            async def _run_inner():
-                async with client_pool.acquire(str(acc.id)) as client:
-                    await action_func(client, acc)
-            await asyncio.wait_for(_run_inner(), timeout=300.0)
-            return True
-        except asyncio.TimeoutError:
-            await log.aerror("bulk.timeout", account_id=acc.id)
-            return False
-        except Exception as e:
-            await log.aerror("bulk.error", account_id=acc.id, error=str(e))
-            return False
-
-    chunk_size = 5
-    for i in range(0, total, chunk_size):
+    import random
+    
+    for i, acc in enumerate(accounts):
         # Check cancellation
         if not _active_bulk_tasks.get(owner_id, True):
             break
             
-        chunk = accounts[i : i + chunk_size]
-        results = await asyncio.gather(*[_task(a, idx * 0.5) for idx, a in enumerate(chunk)], return_exceptions=True)
-        for res in results:
-            if isinstance(res, bool) and res:
-                success += 1
-            else:
-                failed += 1
-                
+        try:
+            async def _run_inner():
+                async with client_pool.acquire(str(acc.id)) as client:
+                    await action_func(client, acc)
+            await asyncio.wait_for(_run_inner(), timeout=300.0)
+            success += 1
+        except asyncio.TimeoutError:
+            await log.aerror("bulk.timeout", account_id=acc.id)
+            failed += 1
+        except Exception as e:
+            await log.aerror("bulk.error", account_id=acc.id, error=str(e))
+            failed += 1
+            
         if progress_callback:
             try:
                 await progress_callback(success, failed, total)
             except Exception:
                 pass # Ignore UI edit errors
                 
-        await asyncio.sleep(1) # Small delay between chunks
+        # Sleep randomly between 5 to 12 seconds to prevent Telegram anti-spam from revoking sessions
+        if i < total - 1:
+            await asyncio.sleep(random.uniform(5, 12))
 
     _active_bulk_tasks.pop(owner_id, None)
     return success, failed

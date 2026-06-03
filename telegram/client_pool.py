@@ -123,12 +123,21 @@ class ClientPool:
                 # Force disconnect or auto-delete on fatal connection/session errors
                 err_str = str(exc).lower()
                 if any(x in err_str for x in ["authkey", "deactivated", "authorization key"]):
-                    try:
-                        from services import account_service
-                        asyncio.create_task(account_service.handle_unauthorized_account(account_id))
-                        await log.aerror("pool.account_revoked", account_id=account_id, error=str(exc))
-                    except Exception:
-                        pass
+                    # Only auto-delete after 3 consecutive auth failures to avoid
+                    # false positives from Telegram rate-limiting during bulk operations
+                    if slot.error_count >= 3:
+                        try:
+                            from services import account_service
+                            asyncio.create_task(account_service.handle_unauthorized_account(account_id))
+                            await log.aerror("pool.account_revoked", account_id=account_id, error=str(exc))
+                        except Exception:
+                            pass
+                    else:
+                        await log.awarning("pool.auth_error_transient", account_id=account_id, attempt=slot.error_count, error=str(exc))
+                        try:
+                            await slot.client.disconnect()
+                        except Exception:
+                            pass
                 elif "wrong session id" in err_str or "connection" in err_str or "closed" in err_str or "unpacking" in err_str:
                     try:
                         await slot.client.disconnect()
