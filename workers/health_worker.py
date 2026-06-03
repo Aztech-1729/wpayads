@@ -94,7 +94,7 @@ async def check_single_account(account) -> None:
             account_id=account.id,
             error=str(exc),
         )
-        response_text = ""
+        return  # Skip evaluation — don't mark as UNKNOWN due to transient errors
 
     # Evaluate health
     record = await health_service.evaluate_account(account, response_text)
