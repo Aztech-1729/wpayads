@@ -31,7 +31,18 @@ def get_ai_client() -> Optional[OpenAI]:
 async def _get_chat_history(user_id: int) -> List[Dict[str, Any]]:
     key = make_key(RedisKeys.AI_CHAT_HISTORY, user_id=user_id)
     history = await cache_get(key)
-    return history if history else []
+    if not history:
+        return []
+    
+    cleaned_history = []
+    for msg in history:
+        if msg.get("role") == "tool":
+            continue
+        if msg.get("tool_calls"):
+            continue
+        cleaned_history.append(msg)
+        
+    return cleaned_history
 
 async def _save_chat_history(user_id: int, history: List[Dict[str, Any]]) -> None:
     # Filter out intermediate tool calls to save tokens and prevent API errors
