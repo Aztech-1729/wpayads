@@ -79,7 +79,7 @@ async def check_single_account(account) -> None:
 
             # Get latest response
             messages = await client.get_messages("SpamBot", limit=1)
-            if not messages:
+            if not messages or messages[0].out:
                 await log.awarning(
                     "health_worker.no_response",
                     account_id=account.id,

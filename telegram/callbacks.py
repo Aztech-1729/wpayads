@@ -992,12 +992,7 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             await campaign_service.pause_campaign(target_id, event.sender_id)
             text = "⏸️ Campaign paused."
         elif action == "resume_campaign":
-            # Check for Auto Join Lock
-            from services.joiner_service import is_joiner_running
-            if is_joiner_running(event.sender_id):
-                await event.answer("⚠️ Campaign Locked! Auto-join in progress. Wait till complete or cancel.", alert=True)
-                return
-
+            # (Lock removed)
             from repositories import users_repo, campaigns_repo
             from core.config import get_settings
             

@@ -34,15 +34,24 @@ async def _get_chat_history(user_id: int) -> List[Dict[str, Any]]:
     return history if history else []
 
 async def _save_chat_history(user_id: int, history: List[Dict[str, Any]]) -> None:
+    # Filter out intermediate tool calls to save tokens and prevent API errors
+    cleaned_history = []
+    for msg in history:
+        if msg.get("role") == "tool":
+            continue
+        if msg.get("tool_calls"):
+            continue
+        cleaned_history.append(msg)
+
     key = make_key(RedisKeys.AI_CHAT_HISTORY, user_id=user_id)
     # Keep only last 20 messages to save context limit
-    if len(history) > 20:
+    if len(cleaned_history) > 20:
         # Keep system prompt if present
-        if history[0]["role"] == "system":
-            history = [history[0]] + history[-19:]
+        if cleaned_history[0]["role"] == "system":
+            cleaned_history = [cleaned_history[0]] + cleaned_history[-19:]
         else:
-            history = history[-20:]
-    await cache_set(key, history, ttl=86400 * 7) # expire in 7 days
+            cleaned_history = cleaned_history[-20:]
+    await cache_set(key, cleaned_history, ttl=86400 * 7) # expire in 7 days
 
 async def chat_with_ai(user_id: int, user_message: str) -> str:
     """
