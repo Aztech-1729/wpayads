@@ -96,21 +96,28 @@ class ClientPool:
                 await client.send_message(target, message)
         """
         account_id = str(account_id)
-        # Check circuit breaker
-        await self._check_circuit(account_id)
-
-        slot = await self._get_or_create_slot(account_id)
-
-        async with slot.lock:
-            try:
-                # Reconnect if disconnected
-                if not slot.client.is_connected():
-                    await asyncio.wait_for(slot.client.connect(), timeout=15.0)
-
-                slot.is_borrowed = True
-                slot.last_used = time.monotonic()
-
-                yield slot.client
+        
+        while True:
+            # Check circuit breaker
+            await self._check_circuit(account_id)
+    
+            slot = await self._get_or_create_slot(account_id)
+    
+            async with slot.lock:
+                # STATE DRIFT FIX: Verify slot wasn't evicted while waiting for the lock
+                if self._slots.get(account_id) is not slot:
+                    # Slot was evicted. Retry acquisition from the beginning.
+                    continue
+                    
+                try:
+                    # Reconnect if disconnected
+                    if not slot.client.is_connected():
+                        await asyncio.wait_for(slot.client.connect(), timeout=15.0)
+    
+                    slot.is_borrowed = True
+                    slot.last_used = time.monotonic()
+    
+                    yield slot.client
 
                 # Success — reset error count
                 slot.error_count = 0
@@ -154,6 +161,9 @@ class ClientPool:
                 r = get_redis()
                 key = make_key(RedisKeys.POOL_LAST_USED, account_id=account_id)
                 await r.set(key, str(time.time()))
+                
+                # Break the retry loop on successful yield/finally completion
+                break
 
     async def evict(self, account_id: str) -> None:
         """Force-disconnect and remove a client (on ban/quarantine)."""
@@ -175,6 +185,13 @@ class ClientPool:
         settings = get_settings()
         client = TelegramClient(session, settings.api_id, settings.api_hash, connection_retries=3, request_retries=3, retry_delay=2)
         async with self._global_lock:
+            # STATE DRIFT FIX: Cleanly disconnect any existing client in this slot before replacing
+            if account_id in self._slots:
+                try:
+                    await self._slots[account_id].client.disconnect()
+                except Exception:
+                    pass
+                    
             self._slots[account_id] = PoolSlot(
                 account_id=account_id,
                 client=client,
@@ -182,8 +199,10 @@ class ClientPool:
 
     async def stats(self) -> dict:
         """Return pool statistics."""
-        total = len(self._slots)
-        borrowed = sum(1 for s in self._slots.values() if s.is_borrowed)
+        # ASYNC FIX: Use a list snapshot to prevent dictionary size mutation errors
+        slots_snapshot = list(self._slots.values())
+        total = len(slots_snapshot)
+        borrowed = sum(1 for s in slots_snapshot if s.is_borrowed)
         idle = total - borrowed
 
         # Get circuit states
@@ -278,7 +297,8 @@ class ClientPool:
                 now = time.monotonic()
                 to_evict = []
 
-                for account_id, slot in self._slots.items():
+                # ASYNC FIX: Use a list snapshot to prevent dictionary size mutation errors
+                for account_id, slot in list(self._slots.items()):
                     if account_id in self.keep_alive_accounts:
                         continue
                     if not slot.is_borrowed and (now - slot.last_used) > eviction_seconds:

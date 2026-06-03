@@ -508,10 +508,16 @@ async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
         
     from repositories import account_groups_repo
     import asyncio
+    import random
     
-    fetch_tasks = [account_groups_repo.fetch_groups_if_missing(aid) for aid in account_ids]
-    if fetch_tasks:
-        await asyncio.gather(*fetch_tasks)
+    # ANTI-SPAM FIX: Fetch sequentially with delays to prevent authkey revocation
+    for i, aid in enumerate(account_ids):
+        try:
+            await account_groups_repo.fetch_groups_if_missing(aid)
+        except Exception:
+            pass # Skip on error, continue to next account
+        if i < len(account_ids) - 1:
+            await asyncio.sleep(random.uniform(1, 3))
         
     all_group_ids = []
     for aid in account_ids:

@@ -88,8 +88,11 @@ async def pause_campaign(campaign_id: str, owner_id: int) -> None:
     await cancel_campaign_tasks(campaign_id)
     
     # Notify via Logs Bot
-    from telegram.logs_bot import send_campaign_pause_log
-    await send_campaign_pause_log(owner_id, campaign.name)
+    try:
+        from telegram.logs_bot import send_campaign_pause_log
+        await send_campaign_pause_log(owner_id, campaign.name)
+    except Exception as e:
+        await log.aerror("campaign.pause.log_error", error=str(e))
 
     await _invalidate_caches(owner_id, campaign_id)
     await log.ainfo("campaign.paused", campaign_id=campaign_id)
@@ -106,8 +109,11 @@ async def resume_campaign(campaign_id: str, owner_id: int) -> None:
     await campaigns_repo.update_status(campaign_id, CampaignStatus.ACTIVE)
     
     # Notify via Logs Bot
-    from telegram.logs_bot import send_campaign_start_log
-    await send_campaign_start_log(owner_id, campaign)
+    try:
+        from telegram.logs_bot import send_campaign_start_log
+        await send_campaign_start_log(owner_id, campaign)
+    except Exception as e:
+        await log.aerror("campaign.start.log_error", error=str(e))
 
     # Instant Wakeup: Trigger the forwarding worker
     from services.forwarding_trigger import trigger_forwarding
@@ -125,11 +131,16 @@ async def select_all_accounts(campaign_id: str, owner_id: int) -> None:
     accounts = await accounts_repo.list_by_owner(owner_id)
     
     import asyncio
+    import random
     
-    # 2. Fetch groups concurrently for all accounts if missing
-    fetch_tasks = [account_groups_repo.fetch_groups_if_missing(str(acc.id)) for acc in accounts]
-    if fetch_tasks:
-        await asyncio.gather(*fetch_tasks)
+    # 2. Fetch groups sequentially to prevent Telegram anti-spam triggers
+    for i, acc in enumerate(accounts):
+        try:
+            await account_groups_repo.fetch_groups_if_missing(str(acc.id))
+        except Exception:
+            pass # Skip on error
+        if i < len(accounts) - 1:
+            await asyncio.sleep(random.uniform(1, 3))
     
     # 3. Build account_ids list and flat group_ids list
     acc_ids = []

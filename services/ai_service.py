@@ -6,7 +6,7 @@ Handles chat history (Redis) and OpenAI API interaction with strict user isolati
 
 import json
 from typing import List, Dict, Any, Optional
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 
 from core.config import get_settings
@@ -15,14 +15,14 @@ from core.constants import RedisKeys
 from services.ai_tools import TOOLS, TOOL_REGISTRY
 
 # We initialize the client dynamically to ensure it picks up changes
-def get_ai_client() -> Optional[OpenAI]:
+def get_ai_client() -> Optional[AsyncOpenAI]:
     settings = get_settings()
     # Read from .env manually if settings doesn't pick it up yet without a reload
     api_key = settings.ai_api_key or os.environ.get("AI_API_KEY")
     base_url = settings.ai_base_url or os.environ.get("AI_BASE_URL")
     
     if api_key:
-        return OpenAI(
+        return AsyncOpenAI(
             base_url=base_url if base_url else None,
             api_key=api_key
         )
@@ -95,7 +95,7 @@ async def chat_with_ai(user_id: int, user_message: str) -> str:
     try:
         MAX_TURNS = 5
         for _ in range(MAX_TURNS):
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model="deepseek-v4-flash-free",
                 messages=history,
                 tools=TOOLS,

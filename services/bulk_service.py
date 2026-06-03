@@ -156,17 +156,21 @@ async def bulk_clean_dms(owner_id: int, progress_callback=None) -> tuple[int, in
 async def bulk_archive_chats(owner_id: int, progress_callback=None) -> tuple[int, int]:
     """Bulk move all private and group chats to archive."""
     async def _action(client, acc):
-        peers = []
-        async for dialog in client.iter_dialogs():
-            # Skip archived
-            if dialog.archived:
-                continue
-            peers.append(InputFolderPeer(peer=dialog.input_entity, folder_id=1))
-            if len(peers) >= 100:
-                break # Limit to 100 per chunk to avoid huge requests
+        while True:
+            peers = []
+            async for dialog in client.iter_dialogs():
+                # Skip archived
+                if dialog.archived:
+                    continue
+                peers.append(InputFolderPeer(peer=dialog.input_entity, folder_id=1))
+                if len(peers) >= 100:
+                    break # Limit to 100 per chunk to avoid huge requests
+                    
+            if not peers:
+                break
                 
-        if peers:
             await client(EditPeerFoldersRequest(folder_peers=peers))
+            await asyncio.sleep(1) # Small delay between batches
 
     return await _execute_bulk(owner_id, _action, progress_callback)
 
