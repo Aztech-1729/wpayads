@@ -1000,7 +1000,10 @@ async def on_confirm_yes(event: events.CallbackQuery.Event, action: str, target_
             settings = get_settings()
             
             if settings.logs_bot_token and user and not user.has_started_logs_bot:
-                bot_username = settings.logs_bot_username or "your_logs_bot"
+                bot_username = settings.logs_bot_username
+                if not bot_username:
+                    await event.answer("Logs bot username is not configured in the environment.", alert=True)
+                    return
                 text = (
                     "⚠️ <b>Logs Bot Not Started</b>\n\n"
                     "To receive real-time campaign notifications and success logs, "
