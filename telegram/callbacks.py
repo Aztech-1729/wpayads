@@ -47,7 +47,8 @@ async def on_accounts(event: events.CallbackQuery.Event) -> None:
     await set_context(event.sender_id, "view_source", "accounts")
     page = 1
     data = await account_cache.get_page(event.sender_id, page)
-    if not data:
+    if not data or not data.get("accounts"):
+        # Cache is cold or empty — warm it and re-read for instant results
         from workers.cache_worker import warm_user_cache
         await warm_user_cache(event.sender_id)
         data = await account_cache.get_page(event.sender_id, page)

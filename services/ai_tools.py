@@ -372,19 +372,52 @@ async def propose_create_campaign(user_id: int, kwargs: dict) -> str:
     name = kwargs.get("name")
     ad_type = kwargs.get("ad_type")
     
+    if not name:
+        return json.dumps({"error": "Campaign name is required."})
+    
+    # Auto-assign all user accounts and their groups
+    accounts = await accounts_repo.list_by_owner(user_id)
+    account_ids = [str(a.id) for a in accounts]
+    
+    all_group_ids = []
+    if account_ids:
+        from repositories import account_groups_repo
+        import asyncio
+        import random
+        for i, aid in enumerate(account_ids):
+            try:
+                await account_groups_repo.fetch_groups_if_missing(aid)
+            except Exception:
+                pass
+            if i < len(account_ids) - 1:
+                await asyncio.sleep(random.uniform(1, 3))
+        
+        for aid in account_ids:
+            group_ids = await account_groups_repo.get_all_group_ids(aid)
+            for gid in group_ids:
+                if gid not in all_group_ids:
+                    all_group_ids.append(gid)
+    
     payload = {
         "owner_id": user_id,
         "name": name,
         "ad_type": ad_type,
         "message": kwargs.get("message", ""),
         "forward_link": kwargs.get("forward_link", ""),
-        "group_delay_seconds": kwargs.get("group_delay_seconds", 15)
+        "group_delay_seconds": kwargs.get("group_delay_seconds", 15),
+        "account_ids": account_ids,
+        "group_ids": all_group_ids,
     }
     
-    await campaigns_repo.create(payload)
+    campaign = await campaigns_repo.create(payload)
+    
+    # Invalidate caches so UI shows the new campaign instantly
+    from cache import campaign_cache
+    await campaign_cache.invalidate_list(user_id)
+    
     return json.dumps({
         "success": True,
-        "message": f"Campaign '{name}' created successfully."
+        "message": f"Campaign '{name}' created with {len(account_ids)} accounts and {len(all_group_ids)} groups assigned."
     })
 
 async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
@@ -449,6 +482,12 @@ async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
         return json.dumps({"error": "No delays provided to update."})
         
     await campaigns_repo.update_fields(target.id, updates)
+    
+    # Invalidate caches so UI reflects changes instantly
+    from cache import campaign_cache
+    await campaign_cache.invalidate_summary(target.id)
+    await campaign_cache.invalidate_list(user_id)
+    
     return json.dumps({
         "success": True,
         "message": f"Campaign '{name}' updated: " + " and ".join(msgs) + "."
@@ -464,6 +503,12 @@ async def propose_delete_campaign(user_id: int, kwargs: dict) -> str:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
         
     await campaigns_repo.delete(target.id)
+    
+    # Invalidate caches so UI reflects deletion instantly
+    from cache import campaign_cache
+    await campaign_cache.invalidate_summary(target.id)
+    await campaign_cache.invalidate_list(user_id)
+    
     return json.dumps({
         "success": True,
         "message": f"Campaign '{name}' deleted successfully."
@@ -480,6 +525,12 @@ async def propose_edit_campaign_message(user_id: int, kwargs: dict) -> str:
         return json.dumps({"error": f"campaign_not_found: You do not own a campaign named '{name}'."})
         
     await campaigns_repo.update_fields(target.id, {"message": message})
+    
+    # Invalidate caches so UI reflects changes instantly
+    from cache import campaign_cache
+    await campaign_cache.invalidate_summary(target.id)
+    await campaign_cache.invalidate_list(user_id)
+    
     return json.dumps({
         "success": True,
         "message": f"Campaign '{name}' message updated successfully."

@@ -497,8 +497,7 @@ def render_autojoin_progress(joined: int, failed: int, total: int, status: str =
         f"├ <b>Failed: {failed}</b>\n"
         f"└ <b>Target Joins: {total}</b>\n\n"
         f"📈 <b>Progress: {progress}/{total} ({pct:.1f}%)</b>\n"
-        f"{_bar(progress, total, 16)}\n\n"
-        f"<i>Campaigns are locked until this process finishes.</i>"
+        f"{_bar(progress, total, 16)}"
     )
 
 

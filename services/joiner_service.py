@@ -25,7 +25,6 @@ log = get_logger("joiner_service")
 
 # Global state to track if joiner is running per user
 _active_joiners: Dict[int, asyncio.Task] = {}
-_joiner_locks: Dict[int, bool] = {}
 
 def is_joiner_running(user_id: int) -> bool:
     """Check if an auto-join task is running for a user."""
@@ -37,7 +36,6 @@ async def cancel_joiner(user_id: int) -> bool:
     task = _active_joiners.get(user_id)
     if task and not task.done():
         task.cancel()
-        _joiner_locks.pop(user_id, None)
         return True
     return False
 
@@ -48,7 +46,6 @@ async def start_auto_join(user_id: int, links: List[str], update_callback) -> No
 
     task = asyncio.create_task(_run_joiner_task(user_id, links, update_callback))
     _active_joiners[user_id] = task
-    _joiner_locks[user_id] = True
 
 async def _run_joiner_task(user_id: int, links: List[str], update_callback) -> None:
     """The background task that executes the joining logic for all accounts in parallel."""
@@ -142,7 +139,6 @@ async def _run_joiner_task(user_id: int, links: List[str], update_callback) -> N
             async with state["lock"]:
                 await update_callback(state["joined"], state["failed"], total_joins, f"❌ Error: {str(e)[:20]}")
     finally:
-        _joiner_locks.pop(user_id, None)
         _active_joiners.pop(user_id, None)
 
 def _sanitize_link(link: str) -> Optional[str]:
