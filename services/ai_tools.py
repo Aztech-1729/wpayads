@@ -294,7 +294,9 @@ async def execute_get_campaign_detail(user_id: int, kwargs: dict) -> str:
         return json.dumps({"error": "campaign_name is required"})
         
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         return json.dumps({"error": f"campaign_not_found: You do not own a campaign named '{name}'."})
@@ -428,7 +430,9 @@ async def propose_edit_campaign_status(user_id: int, kwargs: dict) -> str:
         return json.dumps({"error": "Both campaign_name and status are required."})
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         available = [c.name for c in campaigns]
@@ -464,7 +468,9 @@ async def propose_edit_campaign_interval(user_id: int, kwargs: dict) -> str:
     r_delay = kwargs.get("round_delay_seconds")
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
@@ -497,7 +503,9 @@ async def propose_delete_campaign(user_id: int, kwargs: dict) -> str:
     name = kwargs.get("campaign_name")
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         return json.dumps({"error": f"You do not own a campaign named '{name}'."})
@@ -519,7 +527,9 @@ async def propose_edit_campaign_message(user_id: int, kwargs: dict) -> str:
     message = kwargs.get("message")
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         return json.dumps({"error": f"campaign_not_found: You do not own a campaign named '{name}'."})
@@ -541,7 +551,9 @@ async def propose_edit_campaign_accounts(user_id: int, kwargs: dict) -> str:
     phones = kwargs.get("account_phones", [])
     
     campaigns = await campaigns_repo.list_by_owner(user_id)
-    target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
+    target = next((c for c in campaigns if c.name == name), None)
+    if not target:
+        target = next((c for c in campaigns if c.name.lower() == name.lower()), None)
     
     if not target:
         return json.dumps({"error": f"campaign_not_found: You do not own a campaign named '{name}'."})
