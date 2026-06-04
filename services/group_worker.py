@@ -71,15 +71,14 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
     total_accounts = len(accounts)
     success = 0
     failed = 0
-    
-    await progress_callback(f"⏳ <b>Joining folder on {total_accounts} accounts...</b>")
+    from telegram.menus import render_autojoin_progress
+    await progress_callback(render_autojoin_progress(0, 0, total_accounts, "Joining folder...", 0, total_accounts))
     
     for account in accounts:
         try:
             async with client_pool.acquire(account.id) as client:
                 if not client or not client.is_connected():
-                    failed += 1
-                    await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
+                    await progress_callback(render_autojoin_progress(success, failed, total_accounts, "Processing", 0, total_accounts))
                     continue
                 
                 # 1. Check the invite link to get the peers
@@ -106,9 +105,9 @@ async def bulk_join_folder(user_id: int, slug: str, progress_callback: Callable[
             log.warning("bulk_join_folder_failed", account_id=account.id, error=str(e))
             failed += 1
             
-        await progress_callback(f"⏳ <b>Status:</b> Joined {success} | Failed {failed} / {total_accounts}")
+        await progress_callback(render_autojoin_progress(success, failed, total_accounts, "Processing", 0, total_accounts))
         
-    await progress_callback(f"✅ <b>Folder joined completely!</b>\n\nAccounts Succeeded: {success}\nAccounts Failed: {failed}")
+    await progress_callback(render_autojoin_progress(success, failed, total_accounts, "✅ Folder joined completely!", 0, total_accounts))
 
 
 async def bulk_join_links(user_id: int, links: List[str], progress_callback: Callable[[str], Coroutine]) -> None:
@@ -123,13 +122,14 @@ async def bulk_join_links(user_id: int, links: List[str], progress_callback: Cal
     total_joins = len(accounts) * len(links)
     
     async def legacy_callback(joined: int, failed: int, total: int, status: str = "Processing") -> None:
-        text = (
-            f"📥 <b>AUTO JOIN (TXT)</b>\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"⏳ <b>Status: {status}</b>\n\n"
-            f"✅ <b>Joined: {joined}</b>\n"
-            f"❌ <b>Failed: {failed}</b>\n"
-            f"📊 <b>Total Target: {total_joins}</b>"
+        from telegram.menus import render_autojoin_progress
+        text = render_autojoin_progress(
+            joined=joined, 
+            failed=failed, 
+            total=total_joins, 
+            status=status,
+            groups_count=len(links),
+            accounts_count=len(accounts)
         )
         await progress_callback(text)
 
