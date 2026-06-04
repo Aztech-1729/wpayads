@@ -411,7 +411,10 @@ async def propose_create_campaign(user_id: int, kwargs: dict) -> str:
         "group_ids": all_group_ids,
     }
     
-    campaign = await campaigns_repo.create(payload)
+    try:
+        campaign = await campaigns_repo.create(payload)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
     
     # Invalidate caches so UI shows the new campaign instantly
     from cache import campaign_cache

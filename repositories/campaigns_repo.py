@@ -21,6 +21,18 @@ def _coll():
 
 async def create(data: dict) -> Campaign:
     """Create a new campaign."""
+    owner_id = data.get("owner_id")
+    name = data.get("name")
+    
+    if owner_id and name:
+        import re
+        existing = await _coll().find_one({
+            "owner_id": owner_id,
+            "name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+        })
+        if existing:
+            raise ValueError(f"You already have a campaign named '{existing['name']}'. Please choose a different name.")
+
     now = datetime.utcnow()
     data.setdefault("status", CampaignStatus.DRAFT)
     data.setdefault("stats", {})

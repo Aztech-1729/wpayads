@@ -705,8 +705,12 @@ async def on_ai_confirm(event: events.CallbackQuery.Event, action_id: str) -> No
                 await event.edit("✅ Account deleted successfully.", buttons=keyboards.back_keyboard())
         elif action_type == "create_campaign":
             from repositories import campaigns_repo
-            await campaigns_repo.create(payload)
-            await event.edit(f"✅ Campaign '{payload.get('name')}' created successfully.", buttons=keyboards.back_keyboard())
+            try:
+                await campaigns_repo.create(payload)
+                await event.edit(f"✅ Campaign '{payload.get('name')}' created successfully.", buttons=keyboards.back_keyboard())
+            except ValueError as e:
+                await event.answer(str(e), alert=True)
+                return
         elif action_type == "edit_campaign_status":
             campaign_id = payload.get("campaign_id")
             status = payload.get("status")
