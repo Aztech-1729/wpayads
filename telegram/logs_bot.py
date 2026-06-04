@@ -54,6 +54,68 @@ async def init_logs_bot() -> None:
         )
         await event.respond(text, parse_mode="html")
 
+    @_logs_bot.on(events.CallbackQuery())
+    async def on_callback(event: events.CallbackQuery.Event) -> None:
+        data = event.data.decode("utf-8")
+        
+        if data.startswith("view_batch:"):
+            _, batch_id, page_str = data.split(":")
+            page = int(page_str)
+            
+            from cache.redis_client import get_redis
+            import json
+            redis = get_redis()
+            batch_data = await redis.get(f"wpay:logs_batch:{batch_id}")
+            
+            if not batch_data:
+                await event.answer("Logs expired or not found.", alert=True)
+                return
+                
+            logs = json.loads(batch_data)
+            total = len(logs)
+            per_page = 10
+            total_pages = (total + per_page - 1) // per_page
+            
+            start_idx = page * per_page
+            end_idx = start_idx + per_page
+            page_logs = logs[start_idx:end_idx]
+            
+            text = f"📄 <b>Logs Batch</b> (Page {page + 1}/{total_pages})\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            
+            buttons = []
+            row = []
+            
+            for i, log_entry in enumerate(page_logs):
+                idx = start_idx + i + 1
+                phone = log_entry.get("account_phone", "").lstrip("+")
+                group = log_entry.get("group_id")
+                link = log_entry.get("message_link")
+                
+                text += f"{idx}. +{phone} ➔ Group {group}\n"
+                
+                if link:
+                    row.append(Button.url(f"Msg {idx}", link))
+                    if len(row) >= 2:
+                        buttons.append(row)
+                        row = []
+                        
+            if row:
+                buttons.append(row)
+                
+            nav_row = []
+            if page > 0:
+                nav_row.append(Button.inline("⬅️ Prev", f"view_batch:{batch_id}:{page - 1}"))
+            if page < total_pages - 1:
+                nav_row.append(Button.inline("Next ➡️", f"view_batch:{batch_id}:{page + 1}"))
+                
+            if nav_row:
+                buttons.append(nav_row)
+
+            try:
+                await event.edit(text, buttons=buttons, parse_mode="html")
+            except Exception:
+                await event.answer("Already on this page.")
+
     await _logs_bot.start(bot_token=settings.logs_bot_token)
     me = await _logs_bot.get_me()
     log.info("logs_bot.started", bot_username=me.username)
@@ -103,22 +165,28 @@ async def send_campaign_pause_log(owner_id: int, campaign_name: str) -> None:
         log.error("logs_bot.send_error", owner_id=owner_id, error=str(e))
 
 async def send_ad_success_log(owner_id: int, campaign_name: str, account_phone: str, group_id: int, message_link: str) -> None:
-    """Send a success log with view message button."""
+    """Safely queue a success log instead of instant sending."""
+    if not _logs_bot:
+        return
+        
+    from services.log_queue import add_success_log
+    await add_success_log(owner_id, campaign_name, account_phone, group_id, message_link)
+
+async def send_batch_summary(owner_id: int, campaign_name: str, batch_id: str, count: int) -> None:
+    """Send the batched summary message."""
     if not _logs_bot:
         return
         
     text = (
-        f"✅ <b>Ad Sent Successfully</b>\n\n"
+        f"✅ <b>Batch Success Report</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"<b>Campaign:</b> {campaign_name}\n"
-        f"<b>Account:</b> +{account_phone.lstrip('+')}\n"
-        f"<b>Group:</b> {group_id}"
+        f"<b>Successful Sends:</b> {count} (last 5s)"
     )
     
-    buttons = []
-    if message_link:
-        buttons.append([Button.url("View Message", message_link)])
-        
+    buttons = [[Button.inline("📄 View All Logs", f"view_batch:{batch_id}:0")]]
+    
     try:
         await _logs_bot.send_message(owner_id, text, buttons=buttons, parse_mode="html")
     except Exception as e:
-        log.error("logs_bot.send_error", owner_id=owner_id, error=str(e))
+        log.error("logs_bot.send_batch_error", owner_id=owner_id, error=str(e))

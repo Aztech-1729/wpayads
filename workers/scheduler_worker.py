@@ -23,6 +23,7 @@ from workers import (
     cleanup_worker,
     forwarding_worker,
     health_worker,
+    log_worker,
 )
 
 log = get_logger("scheduler_worker")
@@ -44,6 +45,7 @@ class WorkerManager:
             "cache_worker": cache_worker.run,
             "forwarding_worker": forwarding_worker.run,
             "cleanup_worker": cleanup_worker.run,
+            "log_worker": log_worker.run,
         }
 
         for name, worker_fn in workers.items():
