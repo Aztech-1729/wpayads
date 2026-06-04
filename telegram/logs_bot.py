@@ -4,7 +4,7 @@ Logs Bot — Secondary bot client for campaign logs.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Any
 
 from telethon import TelegramClient, events, Button
 
@@ -116,7 +116,7 @@ async def init_logs_bot() -> None:
             except Exception:
                 await event.answer("Already on this page.")
 
-    await _logs_bot.start(bot_token=settings.logs_bot_token)
+    await _logs_bot.start(bot_token=settings.logs_bot_token) # type: ignore
     me = await _logs_bot.get_me()
     log.info("logs_bot.started", bot_username=me.username)
 
