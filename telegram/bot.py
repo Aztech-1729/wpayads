@@ -345,7 +345,7 @@ def _register_handlers(bot: TelegramClient) -> None:
         lines = ["📊 <b>System Stats</b>\n"]
         for k, v in m.items():
             lines.append(f"  {k}: <b>{v}</b>")
-        lines.append(f"\n🔌 <b>Client Pool</b>")
+        lines.append("\n🔌 <b>Client Pool</b>")
         lines.append(f"  Total: <b>{pool['total_clients']}</b>/{pool['max_clients']}")
         lines.append(f"  Active: <b>{pool['active_borrows']}</b>")
         lines.append(f"  Idle: <b>{pool['idle_clients']}</b>")

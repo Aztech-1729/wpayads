@@ -229,7 +229,7 @@ def campaign_list_keyboard(
     if total > 1:
         nav_row = []
         if current > 1:
-            nav_row.append(Button.inline("⏪ First", f"page:next:campaigns:1", style="primary"))
+            nav_row.append(Button.inline("⏪ First", "page:next:campaigns:1", style="primary"))
             nav_row.append(Button.inline("◀ Prev", f"page:prev:campaigns:{current - 1}", style="primary"))
         nav_row.append(Button.inline(f"📄 {current}/{total}", CB.NOOP, style="primary"))
         if current < total:

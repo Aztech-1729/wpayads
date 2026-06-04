@@ -378,7 +378,7 @@ def render_analytics_detailed(data: dict | None) -> str:
         )
 
     return (
-        f"📈 <b>DETAILED ANALYTICS</b>\n"
+        "📈 <b>DETAILED ANALYTICS</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"Detailed metrics and graphs will be displayed here.\n\n"
         f"<i>Coming soon in the next update!</i>"

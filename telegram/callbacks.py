@@ -471,9 +471,9 @@ async def on_campaign_account_groups(event: events.CallbackQuery.Event, page: in
     groups, pagination = await account_groups_repo.get_groups_paginated(account_id, page, 10)
     
     text = (
-        f"👥 <b>Select Groups</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"Select which groups from this account should be used in the campaign."
+        "👥 <b>Select Groups</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Select which groups from this account should be used in the campaign."
     )
     await event.edit(text, buttons=keyboards.campaign_account_groups_keyboard(campaign_id, account_id, groups, assigned_group_ids, pagination), parse_mode="html")
 
@@ -936,7 +936,7 @@ async def on_page_next(event: events.CallbackQuery.Event, screen: str, page: int
         data = await campaign_cache.get_page(event.sender_id, page)
         campaigns_list = data.get("campaigns", []) if data else []
         pagination = data.get("pagination", {}) if data else {}
-        text = f"📢 <b>Campaigns</b>\n━━━━━━━━━━━━━━━━━━━━━━━━"
+        text = "📢 <b>Campaigns</b>\n━━━━━━━━━━━━━━━━━━━━━━━━"
         buttons = keyboards.campaign_list_keyboard(campaigns_list, pagination)
         await event.edit(text, buttons=buttons, parse_mode="html")
     elif screen == "cmp_acc":

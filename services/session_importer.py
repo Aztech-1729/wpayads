@@ -115,7 +115,6 @@ async def _import_single_session_file(owner_id: int, file_path: str) -> bool:
     """Convert a physical .session file (Telethon or Pyrogram) to a StringSession and import it."""
     client = None
     try:
-        import sqlite3
         import base64
         import struct
 
@@ -201,7 +200,7 @@ async def _import_single_session_file(owner_id: int, file_path: str) -> bool:
             return False
 
         # 3. Import using existing manager
-        from services import session_manager
+        # 3. Import using existing manager
         await session_manager.import_session(owner_id, raw_string)
         return True
             
